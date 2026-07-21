@@ -14,7 +14,7 @@ import re
 
 import pandas as pd
 
-INPUT_PATH = "startups_cleaned.csv"
+INPUT_PATH = "independent_startups.csv"
 OUTPUT_PATH = "green_startups.csv"
 SEARCH_COLUMNS = ["Keywords", "Description"]
 
