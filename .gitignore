@@ -1,0 +1,19 @@
+# Large data exports / archives
+Company_Europe.csv
+Company_Europe.zip
+*.xlsx
+
+# Generated CSV outputs
+startups_filtered.csv
+startups_cleaned.csv
+startups_cleaned_errors.txt
+startups_classified.csv
+green_startups.csv
+green_startups_summary.csv
+green_startups_tree.csv
+independent_startups.csv
+sme_startups.csv
+
+# Logs and caches
+*.log
+__pycache__/
