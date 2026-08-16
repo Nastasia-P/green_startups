@@ -1,0 +1,457 @@
+phrase,matched_terms,sources,n_tokens,firm_count,min_bigram_g2
+absorbent plastics,plastics,description,2,1,11.04
+access sustainable alternatives,alternatives,description,3,1,109.65
+access sustainable electricity generation,generation,description,4,1,64.90
+access sustainable energy alternatives,alternatives,description,4,1,17.30
+access sustainable ingredient alternatives,alternatives,description,4,1,12.53
+accesses ecological transition,ecological,description,3,1,11.31
+achieve sustainable water treatment,treatment,description,4,1,132.63
+address complex biological targets,biological,description,4,1,51.09
+address specific biological pathways,biological,description,4,1,13.36
+adopt cleaner energy alternatives,alternatives,description,4,1,17.30
+adopting wastewater,wastewater,description,2,1,11.18
+advance sustainable chemical,chemical,description,3,1,16.18
+advanced chemical recycling,chemical,description,3,1,32.42
+affordable sustainable alternatives,alternatives,description,3,1,15.98
+agricultural biological,biological,keyword,2,1,1.39
+agricultural biologicals,biologicals,description,2,2,26.21
+agrovoltaic battery,battery,description,2,1,12.94
+algae fuel,fuel,keyword,2,1,5.04
+alternate fuel,fuel,keyword,2,2,18.82
+alternative energy development,alternative,keyword,3,1,7.16
+alternative energy equipment,alternative,keyword,3,19,208.89
+alternative energy firm,alternative,keyword,3,2,16.37
+alternative energy fuel,alternative|fuel,keyword,3,1,0.10
+alternative energy plants,alternative,keyword,3,1,60.94
+alternative energy projects,alternative,description,3,1,250.83
+alternative energy societa,alternative,description,3,1,14.68
+alternative energy solutions,alternative,description,3,1,250.83
+alternative energy source,alternative|source,description,3,2,30.66
+alternative energy sources,alternative|sources,description,3,4,250.83
+alternative energy storage,alternative,keyword,3,2,250.83
+alternative energy tools,alternative,keyword,3,1,21.63
+alternative energy usage,alternative,keyword,3,1,250.83
+alternative fuel,alternative|fuel,description|keyword,2,14,93.82
+alternative heating,alternative,description|keyword,2,2,4.50
+alternative materials,alternative,description|keyword,2,11,29.79
+alternative packaging,alternative,keyword,2,2,2.24
+alternative plastic,alternative|plastic,keyword,2,2,6.71
+alternative power generation,alternative|generation|power,keyword,3,2,5.00
+alternative power solutions,alternative|power,keyword,3,1,5.00
+alternative resources,alternative,keyword,2,1,0.33
+animal free,free,description,3,2,46.54
+appels electrics,electrics,description,2,1,28.46
+architecture enabling electric mobility,electric,description,4,1,12.40
+autonomous electric cargo,electric,description,3,1,45.87
+autonomous electric tractor,electric,description,3,1,27.61
+autonomous electric vehicles,electric|vehicles,description,3,1,45.87
+autonomous electric wheelchair,electric,description,3,1,11.26
+avoiding plastic,plastic,description,2,2,14.57
+avoids harsh chemicals,chemicals,description,3,1,15.49
+axis wind,wind,description,2,6,83.88
+ballast water treatment,treatment,keyword,3,1,53.50
+baltic seaweed,seaweed,description,2,1,13.42
+battery electric,battery|electric,description|keyword,2,8,68.69
+battery electrics,battery|electrics,keyword,2,1,11.21
+battery energy management,battery,description|keyword,3,3,485.14
+battery energy storage,battery,description|keyword,3,73,485.14
+battery recycle,battery|recycle,keyword,2,1,52.96
+battery recycling,battery,description|keyword,2,22,314.39
+battery redeployment,battery,description,2,1,11.89
+battery regeneration,battery,description|keyword,2,2,15.08
+battery regenerators,battery,description,2,1,15.71
+battery replacements,battery,description,2,2,15.78
+battery research,battery,description|keyword,2,5,4.22
+battery storage,battery,description|keyword,2,206,3287.15
+battery storages,battery,keyword,2,3,34.25
+battery swap,battery,description|keyword,2,5,44.53
+battery swapping,battery,description|keyword,2,7,126.47
+battery technology development,battery,keyword,3,2,9.95
+battery technology startup,battery,keyword,3,2,8.45
+battery waste management,battery,keyword,3,2,6.17
+bicycles electric drive,electric,description,3,1,15.67
+bike batteries,batteries,description,2,1,12.69
+biocarbon conversion,conversion,description,2,1,11.13
+bioclimatic design principles,design,description,3,1,21.02
+biocng fuel,fuel,description,2,1,17.01
+biocompatible amorphous metal,metal,description,3,1,17.58
+biodegradability thermal,thermal,description,2,1,11.03
+biodegradable alternative,alternative,description,2,5,26.22
+biodegradable alternatives,alternatives,description|keyword,2,8,68.97
+biodegradable chemicals,chemicals,keyword,2,2,11.48
+biodegradable fuel,fuel,keyword,2,1,2.95
+biodegradable paper,paper,description|keyword,2,2,12.52
+biodegradable plastic,plastic,description|keyword,2,9,96.86
+biodegradable plastics,plastics,description,2,3,23.54
+biodegradable polymer alternatives,alternatives,description,3,1,11.40
+biodegradable textile,textile,description|keyword,2,6,42.41
+biodegradable wood,wood,keyword,2,1,4.52
+bioenergy fuel,fuel,keyword,2,2,17.76
+bioenergy generation,generation,description|keyword,2,2,14.07
+bioenergy power,power,keyword,2,2,13.22
+bioenergy supply,supply,keyword,2,2,13.53
+bioethanol fuel,fuel,keyword,2,2,21.97
+bioethanol processing,processing,keyword,2,1,7.34
+biofuel generation,generation,description|keyword,2,1,11.93
+biogas fuel,fuel,keyword,2,5,34.59
+biogas generation,generation,keyword,2,1,2.10
+biogas power,power,description,2,3,16.98
+biogas processing,processing,description|keyword,2,2,6.03
+biogas supply,supply,keyword,2,2,6.17
+biogenic feedstocks,feedstocks,description,2,1,16.23
+biogenic solids,solids,description,2,1,18.27
+biological agents,biological,description|keyword,2,1,8.17
+biological agriculture,biological,keyword,2,1,1.43
+biological analysis,biological,description|keyword,2,9,26.77
+biological biohacking,biological,description,2,1,11.31
+biological carbon,biological,description,2,1,212.54
+biological cleaning,biological,description|keyword,2,2,6.47
+biological crop,biological,description,2,6,45.54
+biological degradation,biological,description,2,2,17.33
+biological farming,biological,keyword,2,1,1.48
+biological fertilizer,biological,keyword,2,1,4.80
+biological fertilizers,biological,description|keyword,2,2,15.70
+biological herbicide,biological,description,2,1,11.51
+biological herbicides,biological,keyword,2,1,9.31
+biological pesticides,biological,description|keyword,2,5,101.67
+biological plant,biological,description|keyword,2,2,3.64
+biological reprocessing,biological,description|keyword,2,1,24.85
+biological seed,biological,description,2,2,14.26
+biological waste,biological,description|keyword,2,2,2.19
+biological water treatment,biological|treatment,description|keyword,3,1,6.48
+biomass conversion,conversion,description|keyword,2,8,98.65
+biomass energy conversion,conversion,description,3,1,59.27
+biomass energy generation,generation,description,3,1,59.27
+biomass feedstocks,feedstocks,description,2,2,23.24
+biomass fuel,fuel,description|keyword,2,3,33.80
+biomass fuels,fuels,description,2,2,16.65
+biomass generation,generation,keyword,2,1,1.96
+biomass power,power,keyword,2,6,51.09
+biomass processing,processing,description|keyword,2,11,75.95
+biomass wood,wood,description|keyword,2,2,31.93
+biomethane fuel,fuel,description,2,3,22.13
+biomethane power,power,description|keyword,2,3,15.38
+biomethane processing,processing,keyword,2,1,3.11
+bioplastic fuels,fuels,description,2,1,11.73
+bioplastics conversion,conversion,keyword,2,1,8.61
+biopolymer plastic,plastic,keyword,2,1,6.82
+biopolymer processing,processing,keyword,2,1,5.13
+biotechnology fuel,fuel,keyword,2,2,3.72
+biotechnology processing,processing,keyword,2,2,0.69
+biotechnology treatment,treatment,keyword,2,2,0.09
+biowaste processing,processing,keyword,2,3,23.45
+biowaste treatment,treatment,keyword,2,4,40.11
+bound plastic,plastic,description,2,3,45.22
+boundless power,power,description,2,1,14.72
+byproduct recovery,recovery,keyword,2,1,9.27
+capabilities including electric actuators,electric,description,4,1,16.73
+carbon conversion,conversion,description|keyword,2,10,54.55
+carbon dioxide levels differential,levels,description,4,1,11.45
+carbon free buildings,free,keyword,3,1,0.86
+carbon free energy,free,description|keyword,3,10,23.38
+carbon free environment,free,description|keyword,3,2,70.71
+carbon free life,free,description,3,1,13.44
+carbon neutral fuel,fuel,description|keyword,3,7,75.65
+carbonization special treatments,treatments,description,3,1,12.02
+charge electric vehicles,electric|vehicles,description,3,4,28.25
+charging battery,battery,description|keyword,2,4,24.99
+charging electric vehicles,electric|vehicles,description,3,5,14.51
+chemical free,alternatives|chemical|free,description,3,1,90.43
+circular resource recovery,recovery,description,3,1,74.66
+circular textile,textile,description,2,9,61.28
+clean electricity generation,generation,description|keyword,3,9,331.20
+clean energy battery,battery,keyword,3,2,2.55
+clean energy generation,generation,description|keyword,3,7,1001.67
+clean energy power,power,keyword,3,17,303.55
+clean energy supply,supply,description|keyword,3,8,419.34
+clean fuel,fuel,description|keyword,2,71,690.57
+clean label alternatives,alternatives,description,3,1,11.24
+clean power,power,description|keyword,2,34,271.17
+cleaner energy sources,sources,description,3,1,45.56
+cleaner fuels,fuels,description,2,3,32.87
+cobalt free battery,battery|free,description|keyword,3,3,7.36
+collects recycles,recycles,description,2,1,11.95
+compact electric drives,electric,description,3,1,51.05
+compact electric motor,electric,description,3,1,51.05
+compact electric propulsion,electric,description,3,2,51.05
+compacting plastics,plastics,description,2,1,16.05
+compostable alternatives,alternatives,description,2,6,54.62
+compostable plastic,plastic,description|keyword,2,4,29.31
+compostable wrapping paper,paper,description,3,1,12.20
+composting solution,composting,keyword,2,3,27.42
+composting waste,composting,description|keyword,2,5,47.99
+create sustainable alternatives,alternatives,description,3,5,180.96
+cullet recovery,recovery,description,2,1,28.44
+cultivate seaweed,seaweed,keyword,2,1,9.72
+cultivating seaweed,seaweed,description,2,2,27.01
+dairy alternative,alternative,description|keyword,2,5,70.22
+degradable plastic,plastic,keyword,2,1,8.48
+deliver sustainable alternatives,alternatives,description,3,1,46.18
+disposable battery,battery,keyword,2,1,4.22
+disposable medical supply,supply,keyword,3,1,25.36
+disposable plastic,plastic,description|keyword,2,4,30.99
+durable batteries,batteries,description,2,3,21.17
+ecosystem restoration,restoration,description|keyword,2,20,241.75
+electric vehicle,electric|vehicle,description|keyword,2,478,9923.78
+electronic waste management,electronic,keyword,3,2,162.40
+eletric vehicles,vehicles,keyword,2,1,16.59
+enabling maritime offshore,offshore,description,3,1,26.01
+energy recovery,recovery,description|keyword,2,35,155.28
+energy restoration,restoration,keyword,2,2,0.78
+energy storage batteries,batteries,description|keyword,3,6,58.66
+environment restoration,restoration,keyword,2,2,7.25
+environmental cleanup,cleanup,description|keyword,2,5,40.80
+environmental restoration,restoration,description|keyword,2,11,81.52
+excludes plastic,plastic,description,2,1,13.74
+floating offshore,offshore,description|keyword,2,11,200.16
+floating wind,wind,description|keyword,2,11,182.24
+forest restoration,restoration,description|keyword,2,6,92.30
+geothermal drill,geothermal,keyword,2,1,12.81
+geothermal drilling,geothermal,description|keyword,2,5,107.31
+geothermal electricity,geothermal,keyword,2,3,18.81
+geothermal energy,geothermal,description|keyword,2,26,383.25
+geothermal heat,geothermal|heat,description|keyword,2,11,128.37
+geothermal heating,geothermal,description|keyword,2,7,122.25
+geothermal mapping,geothermal,keyword,2,1,5.20
+geothermal plant,geothermal,keyword,2,4,22.65
+geothermal power,geothermal|power,keyword,2,7,90.86
+geothermal probe drilling,geothermal,keyword,3,1,12.13
+geothermal resource,geothermal,keyword,2,1,4.10
+gigawatt offshore,offshore,description,2,1,12.94
+green chemicals,chemicals,description|keyword,2,7,93.06
+green electricity generation,generation,description,3,2,492.37
+green electricity supply,supply,description,3,1,187.13
+green fuel,fuel,description|keyword,2,15,101.04
+green hydrogen supply,supply,keyword,3,3,47.90
+green paper,paper,description|keyword,2,2,6.75
+green power,power,description|keyword,2,13,56.18
+green seaweeds,seaweeds,description,2,1,11.90
+green supply chain,supply,keyword,3,2,1.89
+green vehicles,vehicles,description|keyword,2,2,2.49
+greentech plastics,plastics,description,2,1,11.48
+hybrid battery,battery,description|keyword,2,2,4.92
+hybrid electric aircraft,electric,description|keyword,3,3,74.31
+hybrid electric boats,electric,description,3,1,74.31
+hybrid electric engine,electric,description,3,1,22.09
+hybrid electric propulsion,electric,description,3,2,74.31
+hybrid electronics,electronics,keyword,2,1,3.37
+hybrid power,power,description|keyword,2,5,32.88
+hybrid vehicle,vehicle,description|keyword,2,4,17.09
+hybrid vehicles,vehicles,description,2,5,25.00
+hydro generation,generation,description|keyword,2,2,13.55
+hydroelectric power,power,description|keyword,2,3,62.56
+hydroelectricity geothermal,geothermal,description,2,1,16.25
+hydrogen conversion,conversion,description|keyword,2,2,6.41
+hydrogen fuel,fuel,description|keyword,2,35,572.03
+hydrogen generation,generation,description|keyword,2,21,189.64
+hydrogen power,power,description|keyword,2,9,70.32
+hydrogen vehicles,vehicles,description|keyword,2,4,19.76
+large scale biological,biological,description,3,3,15.57
+lithium battery,battery,description|keyword,2,36,567.05
+littering management,littering,keyword,2,2,20.22
+marine electric motor,electric,keyword,3,1,3.83
+marine pollution treatment,treatment,keyword,3,3,32.67
+marine restoration,restoration,description|keyword,2,4,32.41
+material recovery,recovery,description|keyword,2,49,496.45
+material reuse,reuse,description,2,13,101.60
+measurable ecological impact,ecological,description,3,1,32.20
+megawatt onshore wind,wind,description,3,1,14.21
+megawatt wind,wind,description,2,3,31.75
+metal recycling business,metal,keyword,3,1,9.88
+modular electric vehicles,electric|vehicles,description,3,1,31.78
+natural ecosystems,natural,description,2,8,47.15
+natural environment,natural,description,2,12,31.69
+natural environments,natural,description,2,10,24.76
+natural food,natural,description|keyword,2,39,150.56
+natural hydrogen,natural,description|keyword,2,7,59.11
+natural organic,natural,description,2,13,40.22
+natural resource,natural,description,2,11,65.48
+natural resources,natural,description|keyword,2,43,312.81
+nature restoration,restoration,description|keyword,2,15,220.97
+ocean cleanup,cleanup,keyword,2,5,66.18
+ocean energy power station,power,keyword,4,1,42.74
+ocean pollution treatment,treatment,keyword,3,1,30.84
+ocean restoration,restoration,keyword,2,2,13.91
+organic chemicals,chemicals,keyword,2,2,6.18
+organic cotton textiles,textiles,description,3,1,19.66
+organic dairy free chocolates,free,description,4,1,19.76
+organic electronics,electronics,description|keyword,2,5,21.98
+organic food alternatives,alternatives,description,3,1,54.82
+organic food supply,supply,description,3,1,299.67
+organic treatment,treatment,keyword,2,1,0.36
+packaging alternatives,alternatives,description|keyword,2,5,24.83
+passive house,passive,keyword,2,1,5.06
+plastic alternative,alternative|plastic,description|keyword,2,11,71.63
+plastic alternatives,alternatives|plastic,keyword,2,15,97.53
+plastic free alternatives,alternatives|free|plastic,description,3,3,90.43
+plastic free chewing,free|plastic,description,3,1,13.72
+plastic free kerbside,free|plastic,description,3,1,12.29
+plastic free materials,free|plastic,description|keyword,3,6,29.79
+plastic free options,free|plastic,description,3,2,67.52
+plastic free packaging,free|plastic,description|keyword,3,20,107.83
+plastic free shopping,free|plastic,description,3,1,37.61
+plastic free vegan,free|plastic,description,3,1,71.74
+plastic free water,free|plastic,description,3,1,17.14
+plastic recycling,plastic,description|keyword,2,54,895.98
+plastic waste control,plastic,keyword,3,8,41.97
+power energy storage,power,description,3,2,13.91
+processing industry green,processing,description,3,1,31.17
+rechargeable batteries,batteries,description,2,5,91.01
+rechargeable battery,battery,description|keyword,2,18,261.02
+rechargeable power,power,description|keyword,2,6,51.44
+recyclable battery,battery,keyword,2,1,2.18
+recyclable plastic,plastic,description|keyword,2,12,122.68
+recyclable scrap,scrap,keyword,2,1,8.95
+recycle cigarette,recycle,description,2,1,14.16
+recycle shellfish,recycle,description,2,1,13.14
+recycled electronics marketplace,electronics,keyword,3,1,3.16
+recycled textiles,textiles,description|keyword,2,11,145.12
+recycles byproducts,recycles,description,2,1,15.24
+recycles repayment,recycles,description,2,1,14.75
+recycles tires,recycles,description,2,2,32.26
+recycling plastic,plastic,description|keyword,2,15,139.25
+recycling textile,textile,keyword,2,1,1.37
+reducing plastic,plastic,description,2,11,54.69
+reducing textile,textile,description,2,5,22.90
+reducing water pressure,pressure,description,3,1,14.75
+reef restoration,restoration,description|keyword,2,5,155.23
+regreen power,power,description,2,1,14.72
+renewable chemicals,chemicals,description|keyword,2,7,36.29
+renewable electricity generation,generation,description|keyword,3,11,766.02
+renewable energy generation,generation,description|keyword,3,43,1001.67
+renewable energy power,power,description|keyword,3,55,303.55
+renewable energy sources,sources,description|keyword,3,86,1397.30
+renewable energy supply,supply,description|keyword,3,30,419.34
+renewable feedstock,feedstock,keyword,2,2,11.65
+renewable feedstocks,feedstocks,description,2,7,66.54
+renewable fuel,fuel,description|keyword,2,15,83.02
+renewable generation,generation,description|keyword,2,23,81.38
+renewable heat,heat,description|keyword,2,10,55.80
+renewable plastic,plastic,keyword,2,1,0.01
+renewable power,power,description|keyword,2,66,575.70
+renewable source,source,description|keyword,2,12,54.50
+renewable sources,sources,description,2,24,135.99
+replaces traditional plastic,plastic,description,3,2,27.88
+restoration conserving biodiversity,restoration,description,3,1,12.88
+restoration efforts,restoration,description,2,3,25.91
+reusable plastic,plastic,description|keyword,2,5,33.15
+sewage treatment,sewage|treatment,description|keyword,2,4,36.04
+sludge processing,processing,description|keyword,2,2,21.29
+sludge treatment,treatment,description|keyword,2,3,76.79
+soil cleanup,cleanup,keyword,2,1,8.68
+soil restoration,restoration,keyword,2,3,19.67
+soil treatment,treatment,description|keyword,2,5,24.95
+supply chain sustainability,supply,description|keyword,3,9,23.66
+sustainable alternative energy,alternative,keyword,3,1,250.83
+sustainable aviation fuel,fuel,description|keyword,3,17,267.02
+sustainable batteries,batteries,description|keyword,2,13,49.05
+sustainable chemicals,chemicals,description|keyword,2,26,126.70
+sustainable disposal,disposal,description|keyword,2,4,13.62
+sustainable electric battery,battery|electric,keyword,3,2,10.43
+sustainable energy generation,generation,description,3,8,1001.67
+sustainable energy sources,sources,description|keyword,3,12,1397.30
+sustainable energy supply,supply,description|keyword,3,8,419.34
+sustainable feedstock,feedstock,keyword,2,2,7.71
+sustainable food alternatives,alternatives,description,3,1,54.82
+sustainable food supply,supply,description|keyword,3,9,299.67
+sustainable fuel,fuel,description|keyword,2,24,126.40
+sustainable fuels,fuels,description,2,5,23.00
+sustainable meat alternative,alternative,description,3,1,48.15
+sustainable meat alternatives,alternatives,description,3,1,48.15
+sustainable paper,paper,description|keyword,2,7,35.31
+sustainable plastics,plastics,description|keyword,2,9,55.71
+sustainable power,power,description|keyword,2,59,216.68
+sustainable rubber,rubber,keyword,2,1,2.05
+sustainable supply,supply,description|keyword,2,22,52.25
+sustainable textile,textile,description|keyword,2,28,141.87
+sustainable toilet paper,paper,description,3,1,43.02
+sustainable travel alternative,alternative,keyword,3,1,0.03
+sustainable urban development,urban,description|keyword,3,4,217.05
+sustainable urban environment,urban,description,3,2,43.21
+sustainable urban environments,urban,description,3,4,301.40
+sustainable urban infill,urban,description,3,1,13.60
+sustainable urban logistics,urban,description,3,3,301.40
+sustainable urban mobility,urban,description|keyword,3,9,301.40
+sustainable urban neighbourhoods,urban,description,3,1,12.56
+sustainable urban spaces,urban,description,3,1,173.58
+sustainable urban transport,urban,description,3,2,151.11
+sustainable urban transportation,urban,description|keyword,3,9,301.40
+sustainable vehicle,vehicle,description|keyword,2,3,1.31
+sustainable vehicles,vehicles,description|keyword,2,10,13.58
+sustainable water supply,supply,keyword,3,2,132.63
+sustainable wood,wood,description|keyword,2,13,47.50
+sustaining power,power,description,2,2,16.67
+textile waste management,textile,description|keyword,3,6,749.38
+thermal energy storage,thermal,description|keyword,3,21,669.74
+thermal storage energy,thermal,keyword,3,1,15.86
+thermal storage management,thermal,keyword,3,1,1.61
+transition fuels,fuels,description,2,1,11.52
+unrivalled ecological footprint,ecological,description,3,1,15.59
+upcycling scrap,scrap,description,2,1,11.38
+urban biodiversity,urban,description|keyword,2,3,12.98
+urban farm,urban,description|keyword,2,3,16.83
+urban farming,urban,description|keyword,2,27,257.15
+urban regeneration,urban,description|keyword,2,9,112.15
+vehicle charging facility,vehicle,description|keyword,3,3,36.84
+vehicle charging hubs,vehicle,description,3,3,59.50
+vehicle charging infrastructure,vehicle,description|keyword,3,46,2020.41
+vehicle charging management,vehicle,description,3,8,15.96
+vehicle charging network,vehicle,description|keyword,3,9,328.90
+vehicle charging networks,vehicle,description,3,2,64.76
+vehicle charging outlets,vehicle,keyword,3,1,5.66
+vehicle charging points,vehicle,description,3,6,607.73
+vehicle charging station,vehicle,description|keyword,3,17,3559.12
+vehicle charging stations,vehicle,description,3,28,2090.27
+vehicle electrification,vehicle,description|keyword,2,4,33.38
+waste conversion,conversion,description|keyword,2,24,185.21
+waste disposal,disposal,description|keyword,2,42,712.66
+waste disposals,disposals,description,2,1,11.33
+waste food processing,processing,keyword,3,2,0.04
+waste free environment,free,keyword,3,2,13.01
+waste heat management,heat,keyword,3,1,1.58
+waste heat recovery,heat|recovery,description|keyword,3,14,429.81
+waste material treatment,treatment,keyword,3,1,0.64
+waste processing,processing,description|keyword,2,29,194.94
+waste recovery,recovery,description|keyword,2,12,110.14
+waste recycle,recycle,description|keyword,2,17,447.65
+waste treatment,treatment,description|keyword,2,35,226.91
+wastewater aeration,wastewater,description|keyword,2,2,26.26
+wastewater analysis,wastewater,keyword,2,4,9.17
+wastewater disposal,disposal|wastewater,keyword,2,1,7.26
+wastewater energy,wastewater,description|keyword,2,1,0.72
+wastewater facilities,wastewater,description|keyword,2,3,15.53
+wastewater infrastructure,wastewater,description|keyword,2,2,7.30
+wastewater management,wastewater,description|keyword,2,15,46.95
+wastewater processing,processing|wastewater,keyword,2,1,1.64
+wastewater reclamation,wastewater,description|keyword,2,1,28.81
+wastewater remediation,wastewater,keyword,2,1,7.68
+wastewater solutions,wastewater,description|keyword,2,5,24.57
+wastewater systems engineering,wastewater,keyword,3,1,16.77
+wastewater transportation,wastewater,keyword,2,1,2.73
+wastewater treatment,treatment|wastewater,description|keyword,2,71,1405.42
+wastewater usage,wastewater,keyword,2,4,28.93
+water cleanup,cleanup,keyword,2,1,5.53
+water consumption recovery,recovery,keyword,3,1,0.91
+water damage restoration,restoration,description,3,2,55.52
+water disposal,disposal,keyword,2,1,2.67
+water restoration,restoration,description|keyword,2,1,10.43
+wind electric power,electric|power|wind,description|keyword,3,3,7.15
+wind electricity,wind,description|keyword,2,3,7.48
+wind energy,wind,description|keyword,2,121,1533.30
+wind engineering,wind,description|keyword,2,4,11.61
+wind equipment,wind,keyword,2,1,0.00
+wind farm,wind,description|keyword,2,51,1213.34
+wind farming,wind,keyword,2,5,45.20
+wind farms,wind,description,2,39,544.35
+wind hydroelectricity,wind,description,2,1,12.28
+wind industry,wind,description|keyword,2,6,1.95
+wind measurement,wind,description|keyword,2,2,9.93
+wind offshore,offshore|wind,keyword,2,1,7.99
+wind park,wind,keyword,2,1,32.76
+wind plant asset,wind,keyword,3,1,0.16
+wind power,power|wind,description|keyword,2,54,758.02
+wind turbine,turbine|wind,description|keyword,2,72,2302.82
+wind turbines,turbines|wind,description|keyword,2,75,1859.93
+windmills turbine,turbine,keyword,2,1,13.55
+wood alternative,alternative|wood,keyword,2,3,12.70
+wood recycler,wood,keyword,2,1,9.93

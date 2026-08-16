@@ -13,7 +13,12 @@ authoritative sources via a deterministic multi-source vote.
         (a green "atom": Wikidata green subclass, or a one-word CPC/Compass/EGSS
          item name), OR
       it is attested (as any token) in >= 2 distinct green-defining families
-  and it is not on BROAD_DENYLIST and not a stopword.
+  and it is not a stopword.
+
+  This builder is intentionally source-only: it does NOT apply the classifier's
+  dual-use/objective denylist. Dual-use source terms (e.g. `battery`, `hydrogen`)
+  therefore appear here as candidates; the classifier enforces the denylist when
+  it loads the lexicon.
 
   Component tokens of multiword titles (e.g. `argentina` from "solar power in
   Argentina", `aircraft` from a CPC title) do NOT self-promote: they must earn a
@@ -38,10 +43,7 @@ import os
 import re
 from pathlib import Path
 
-from build_strict_vocabulary_full_audit_algorithmic import (
-    BROAD_DENYLIST,
-    normalise_phrase,
-)
+from build_strict_vocabulary_full_audit_algorithmic import normalise_phrase
 
 ROOT = Path(__file__).resolve().parent
 RAW_DIR = ROOT / "data" / "sources" / "lexicon_raw"
@@ -114,8 +116,8 @@ STOPWORDS: set[str] = set(
     """.split()
 )
 # NOTE: `energy/waste/water/carbon/emission(s)/greenhouse/gas` are organising
-# objectives already on BROAD_DENYLIST; listing them here too keeps them out even
-# if the denylist wording changes.
+# objectives, not stand-alone green anchors, so they are dropped as stopwords
+# here regardless of any downstream classifier filtering.
 
 
 def tokens_of(text: str) -> list[str]:
@@ -341,8 +343,6 @@ def is_clean(tok: str) -> bool:
         return False
     if tok in STOPWORDS:
         return False
-    if tok in BROAD_DENYLIST:
-        return False
     return True
 
 
@@ -393,10 +393,9 @@ def decide(tok: str, present: list[str], is_atom: bool) -> tuple[str, str]:
             return "ACCEPT", "vote"
     # Path P3 - regulatory-grounded (eu_reg as a sole source). A token attested
     # in the EU regulatory corpus is accepted on its own, subject to a length
-    # guard (>= REG_SOLE_MIN chars) plus the shared denylist/stopword filters.
-    # Longer tokens are far more likely to be delineated activities than bare
-    # objective/dual-use nouns (which the denylist already removes). Disable with
-    # REG_SOLE_ENABLED=0.
+    # guard (>= REG_SOLE_MIN chars) plus the shared stopword filter. Longer
+    # tokens are far more likely to be delineated activities than bare
+    # objective/dual-use nouns. Disable with REG_SOLE_ENABLED=0.
     if REG_SOLE_ENABLED and "eu_reg" in present and len(tok) >= REG_SOLE_MIN:
         return "ACCEPT", "regulatory"
     if len(present) >= 1:
@@ -460,7 +459,6 @@ def main() -> int:
             "accept_path": path,
             "example_labels": examples,
             "decision": decision,
-            "on_denylist": "1" if tok in BROAD_DENYLIST else "0",
         }
         prov_rows.append(row)
         prov_by_tok[tok] = row
@@ -487,7 +485,6 @@ def main() -> int:
                 "accept_path": f"variant_of:{tok}",
                 "example_labels": prov_by_tok[tok]["example_labels"],
                 "decision": "ACCEPT",
-                "on_denylist": "1" if var in BROAD_DENYLIST else "0",
             }
             prov_rows.append(vrow)
             prov_by_tok[var] = vrow
@@ -505,7 +502,7 @@ def main() -> int:
     with PROVENANCE_PATH.open("w", encoding="utf-8", newline="") as f:
         cols = [
             "token", "length", "n_families", "source_families", "accept_path",
-            "example_labels", "decision", "on_denylist",
+            "example_labels", "decision",
         ]
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
