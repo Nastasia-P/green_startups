@@ -1,0 +1,30 @@
+#
+# Pinned Wikidata SPARQL query for the green-tech anchor lexicon (family: wikidata).
+# Returns English labels and aliases of items that are (transitive) subclasses of
+# a small set of green-technology root classes.
+#
+# Root classes (QIDs verified against rdfs:label - see registry):
+#   wd:Q12705    renewable energy
+#   wd:Q1962383  sustainable energy
+#   wd:Q743030   environmental technology
+#   wd:Q1099456  clean technology
+#   wd:Q132580   recycling
+#   wd:Q180388   waste management
+#
+# Bounded to the subclass tree (P279*) only. The instance hop (P31) was removed
+# because it pulls thousands of concrete facilities and times out the endpoint;
+# technology *concepts* (e.g. agrivoltaics, a subclass of photovoltaics) are all
+# reachable via P279* and that is what the anchor lexicon needs.
+#
+# Every returned item is, by construction, a subclass of a green-tech root, so a
+# single-token item label/alias is a green concept by ontology (this feeds the
+# ontology-grounded acceptance path in build_green_lexicon.py).
+#
+SELECT DISTINCT ?item ?itemLabel ?alias WHERE {
+  VALUES ?root {
+    wd:Q12705 wd:Q1962383 wd:Q743030 wd:Q1099456 wd:Q132580 wd:Q180388
+  }
+  ?item wdt:P279* ?root .
+  OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}

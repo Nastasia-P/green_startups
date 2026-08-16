@@ -49,14 +49,14 @@ flowchart TB
 Downloads every source "family" and archives the raw bytes with a SHA-256
 checksum so the lexicon is byte-for-byte reproducible.
 
-| Family | Class | Source | Contribution |
-|---|---|---|---|
-| `gemet` | corroboration | GEMET SKOS thesaurus (EEA/Eionet) | evidence only |
-| `cpc_y02` | green-defining | CPC Y02/Y04S climate-mitigation patent taxonomy (USPTO) | can promote anchors |
-| `wikidata` | green-defining | Wikidata green-tech subclasses (SPARQL, pinned query) | can promote anchors |
-| `taxonomy_compass` | green-defining | EU Taxonomy Compass activities/sectors | corroboration for atoms |
-| `egss` | green-defining | EGSS compendium, Reg (EU) 2015/2174 (EUR-Lex mirror) | can promote anchors |
-| `eu_reg` | corroboration | 16 archived EU regulatory texts (`concept_seeds.csv`) | evidence only |
+| Family | Class | Source | URL | Contribution |
+|---|---|---|---|---|
+| `gemet` | corroboration | GEMET SKOS thesaurus (EEA/Eionet) | https://www.eionet.europa.eu/gemet/exports/latest/gemet.rdf.gz | evidence only |
+| `cpc_y02` | green-defining | CPC Y02/Y04S climate-mitigation patent taxonomy (USPTO) | https://www.uspto.gov/web/patents/classification/cpc/html/cpc-{Y02A,Y02B,Y02C,Y02D,Y02E,Y02P,Y02T,Y02W,Y04S}.html | can promote anchors |
+| `wikidata` | green-defining | Wikidata green-tech subclasses (SPARQL, pinned query) | https://query.wikidata.org/sparql (query: `data/sources/lexicon_queries/wikidata_green_tech.rq`) | can promote anchors |
+| `taxonomy_compass` | green-defining | EU Taxonomy Compass activities/sectors | https://webgate.ec.europa.eu/sft/api/v1/en/activities and https://webgate.ec.europa.eu/sft/api/v1/en/sectors | corroboration for atoms |
+| `egss` | green-defining | EGSS compendium, Reg (EU) 2015/2174 (EUR-Lex, CELEX 32015R2174) | https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32015R2174 (archived mirror: `data/sources/lexicon_raw/egss_2015_2174.txt`) | can promote anchors |
+| `eu_reg` | corroboration | 16 archived EU regulatory texts (`concept_seeds.csv`) | see `data/sources/manifest.csv` (per-document URLs) | evidence only |
 
 **Outputs:** `data/sources/lexicon_raw/*`, `data/sources/lexicon_sources_registry.csv`
 (url, final_url, http_status, content_type, sha256, local path, fetched_at_utc,
