@@ -16,7 +16,10 @@ labels every firm through a sequential (cascading) rule.
 ```mermaid
 flowchart TB
   subgraph lex [Lexicon track]
-    Sources["Authoritative sources<br/>GEMET, CPC Y02, Wikidata,<br/>EU Taxonomy Compass, EGSS, EU regs"] --> Fetch["fetch_lexicon_sources.py"]
+    Regs["EU framework documents<br/>(Taxonomy Reg, Delegated Acts, CEP, NZIA, ...)"] --> Scrape["scrape_environmental_sources.py"]
+    Scrape --> Seeds2["concept_seeds.csv<br/>(eu_reg seeds)"]
+    Seeds2 --> Build
+    Sources["Authoritative sources<br/>GEMET, CPC Y02, Wikidata,<br/>EU Taxonomy Compass, EGSS"] --> Fetch["fetch_lexicon_sources.py"]
     Fetch --> Raw["data/sources/lexicon_raw/*<br/>+ lexicon_sources_registry.csv"]
     Raw --> Build["build_green_lexicon.py"]
     Build --> V1["strong_terms_v1.csv<br/>+ provenance + candidates"]
@@ -39,6 +42,43 @@ flowchart TB
   Pop --> Classify
   Classify --> Out["Green firms + full ledger + funnel report"]
 ```
+
+---
+
+## 0. Regulatory seed extraction (the `eu_reg` family)
+
+**Script:** [scrape_environmental_sources.py](scrape_environmental_sources.py)
+
+Builds `data/sources/concept_seeds.csv`, the pre-extracted regulatory seed
+phrases consumed as the `eu_reg` family in Section 2. Same
+download -> checksum -> deterministic-regex pattern as the other sources, applied
+to the EU regulatory corpus.
+
+1. **Download** official EU environmental framework documents (HTML/PDF) from a
+   fixed source catalogue - e.g. Regulation (EU) 2020/852 (Taxonomy), the Climate
+   and Environmental Delegated Acts, the Eurostat CEP classification, NZIA - into
+   `data/sources/raw/`, computing a SHA-256 and recording each in
+   `data/sources/manifest.csv`.
+2. **Extract plain text** (`pypdf` for PDFs) into `data/sources/text/`.
+3. **Apply explicit regex extractors (no LLM)** to the text:
+   - `CEP_CODE_LABEL` - coded classification lines, e.g. `01 Protection of ambient
+     air and climate`, `0402 Recycling`.
+   - `ANNEX_ACTIVITY` - Taxonomy / Delegated-Act annex activity titles, e.g.
+     `4.1. Electricity generation using solar ...`.
+   - `CONCEPT_HEADING` - a fixed set of environmental concept phrases (climate
+     change mitigation/adaptation, circular economy, pollution prevention,
+     biodiversity, ecosystems, renewable energy, energy efficiency, carbon
+     capture/removal/storage/farming, waste prevention/recycling/..., water
+     reuse/efficiency/..., right to repair, ecodesign, net-zero).
+   - `TECH_LIST_ITEM` - NZIA-style technology list items (solar, wind, geothermal,
+     hydropower, heat pump, battery, electrolyser, carbon capture, grid, nuclear,
+     biogas, biomethane, biofuel, ...).
+4. **Dedupe** by `normalised_phrase` within each source; drop phrases shorter than
+   4 characters and administrative boilerplate (`european union`,
+   `official journal`, `european commission`, `member states`).
+
+**Output:** `data/sources/concept_seeds.csv` (`seed_phrase`, `normalised_phrase`,
+`source_id`, `source_url`, `objective_guess`, `extraction_rule`, `excerpt`).
 
 ---
 
@@ -270,8 +310,9 @@ incremental contribution in the order Vertical -> token -> phrase.
   `nltk` POS tagger. The final classifier is pure string matching and needs
   neither.
 - **Python packages:** `pandas`, `pyarrow` (optional, faster population filter),
-  `nltk` (phrase POS gate). If the interpreter lacks the stdlib `sqlite3` (which
-  `nltk` imports), install a drop-in such as `pysqlite3-binary`.
+  `nltk` (phrase POS gate), `pypdf` (regulatory seed extraction). If the
+  interpreter lacks the stdlib `sqlite3` (which `nltk` imports), install a drop-in
+  such as `pysqlite3-binary`.
 - **Input files that must be present** (not all are in the repo):
   - `Company_Europe.zip` / `Company_Europe.csv` - raw PitchBook export (obtain
     separately; gitignored).
@@ -288,7 +329,10 @@ are committed.
 ### 7.1 Lexicon track
 
 ```bash
-# 1. Fetch + checksum the source families
+# 0. Extract regulatory seed phrases (eu_reg family)
+python scrape_environmental_sources.py     # -> data/sources/concept_seeds.csv (+ raw/, text/, manifest.csv)
+
+# 1. Fetch + checksum the other source families
 python fetch_lexicon_sources.py            # -> data/sources/lexicon_raw/*, registry
 
 # 2. Build the single-token anchor pool
