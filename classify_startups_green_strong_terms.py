@@ -50,6 +50,9 @@ TOKENS_PATH = OUTPUT_DIR / "strong_terms_active.csv"
 PHRASES_PATH = OUTPUT_DIR / "strong_term_phrases.csv"
 
 GREEN_OUTPUT_PATH = OUTPUT_DIR / "startups_to_green_startups_strong_terms.csv"
+NON_GREEN_OUTPUT_PATH = (
+    OUTPUT_DIR / "startups_to_nongreen_startups_strong_terms.csv"
+)
 LEDGER_OUTPUT_PATH = (
     OUTPUT_DIR / "startup_population_green_classification_strong_terms.csv"
 )
@@ -168,6 +171,7 @@ def main() -> None:
     with (
         INPUT_PATH.open("r", encoding="utf-8-sig", newline="") as fin,
         GREEN_OUTPUT_PATH.open("w", encoding="utf-8", newline="") as fgreen,
+        NON_GREEN_OUTPUT_PATH.open("w", encoding="utf-8", newline="") as fnongreen,
         LEDGER_OUTPUT_PATH.open("w", encoding="utf-8", newline="") as fledger,
     ):
         reader = csv.DictReader(fin)
@@ -181,6 +185,9 @@ def main() -> None:
         green_fields = list(reader.fieldnames) + AUDIT_FIELDS
         green_writer = csv.DictWriter(fgreen, fieldnames=green_fields)
         green_writer.writeheader()
+
+        non_green_writer = csv.DictWriter(fnongreen, fieldnames=green_fields)
+        non_green_writer.writeheader()
 
         ledger_base = [f for f in LEDGER_BASE_FIELDS if f in reader.fieldnames]
         ledger_writer = csv.DictWriter(fledger, fieldnames=ledger_base + AUDIT_FIELDS)
@@ -234,6 +241,8 @@ def main() -> None:
             )
             if is_green:
                 green_writer.writerow({**row, **audit})
+            else:
+                non_green_writer.writerow({**row, **audit})
 
             if total_rows % 20_000 == 0:
                 cum = sum(stage_new.values())
@@ -291,6 +300,7 @@ def main() -> None:
         [
             "",
             f"green_csv: {GREEN_OUTPUT_PATH}",
+            f"non_green_csv: {NON_GREEN_OUTPUT_PATH}",
             f"ledger_csv: {LEDGER_OUTPUT_PATH}",
         ]
     )
