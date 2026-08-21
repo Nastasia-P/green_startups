@@ -21,6 +21,7 @@ import pandas as pd
 from . import config
 from .data_sources import (
     RelationalSource,
+    _log,
     load_company_frame,
     load_population_key,
     make_relational_source,
@@ -125,6 +126,22 @@ _GROUPS: GroupIndex | None = None  # type: ignore[assignment]
 # --------------------------------------------------------------------------
 # Deal / investor firm-id sets from the relational source
 # --------------------------------------------------------------------------
+def _parse_deal_dates(raw: pd.Series) -> pd.Series:
+    """Parse deal dates robustly.
+
+    Try the configured format first; for values it fails to parse, fall back to
+    pandas' format inference. This keeps F3 from silently dropping every row when
+    the real Deal.csv uses a different date layout than config.DEAL_DATE_FORMAT.
+    """
+    s = raw.astype("string")
+    parsed = pd.to_datetime(s, format=config.DEAL_DATE_FORMAT, errors="coerce")
+    unparsed = parsed.isna() & nonnull_mask(s)
+    if unparsed.any():
+        fallback = pd.to_datetime(s[unparsed], errors="coerce")
+        parsed.loc[unparsed] = fallback
+    return parsed
+
+
 def _build_deal_sets(rel: RelationalSource) -> dict[str, set[str]]:
     """Firm-id sets from Deal after filters F2-F4 (spec Part III)."""
     deal = rel.table("Deal")
@@ -134,13 +151,17 @@ def _build_deal_sets(rel: RelationalSource) -> dict[str, set[str]]:
         return result
 
     d = deal.copy()
+    _log(f"[T4.0] deal filter: start rows={len(d)}")
     if "DealStatus" in d.columns:  # F2
         d = d[d["DealStatus"].astype("string").str.strip() == config.DEAL_STATUS_COMPLETED]
+        _log(f"[T4.0] deal filter: after F2 (DealStatus=={config.DEAL_STATUS_COMPLETED}) rows={len(d)}")
     if "DealDate" in d.columns:  # F3
-        d["_date"] = pd.to_datetime(d["DealDate"], format=config.DEAL_DATE_FORMAT, errors="coerce")
+        d["_date"] = _parse_deal_dates(d["DealDate"])
         d = d[d["_date"].notna() & (d["_date"] <= pd.Timestamp(config.EXTRACT_DATE))]
+        _log(f"[T4.0] deal filter: after F3 (valid DealDate<={config.EXTRACT_DATE}) rows={len(d)}")
     if "DealType" in d.columns:  # F4
         d = d[~d["DealType"].astype("string").str.strip().isin(config.DEAL_TYPE_EXCLUSIONS)]
+        _log(f"[T4.0] deal filter: after F4 (non-excluded DealType) rows={len(d)}")
 
     if d.empty:
         return result

@@ -20,6 +20,12 @@ import pandas as pd
 from . import config
 
 
+def _log(msg: str) -> None:
+    """Print a diagnostic line when config.VERBOSE is set."""
+    if config.VERBOSE:
+        print(msg)
+
+
 # --------------------------------------------------------------------------
 # Missing-value helper (spec §3.6 / decision D-T4.0-6)
 # --------------------------------------------------------------------------
@@ -170,14 +176,22 @@ class FullExtractRelationalSource(RelationalSource):
         if cols:
             read_kwargs["usecols"] = cols
         frames: list[pd.DataFrame] = []
+        raw_rows = 0
         for chunk in pd.read_csv(path, **read_kwargs):
+            raw_rows += len(chunk)
             if filter_col and filter_set is not None and filter_col in chunk.columns:
                 chunk = chunk[chunk[filter_col].isin(filter_set)]
             if not chunk.empty:
                 frames.append(chunk)
-        if not frames:
-            return pd.DataFrame(columns=cols)
-        return pd.concat(frames, ignore_index=True)
+        result = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=cols)
+        _log(
+            f"    header cols={list(header)[:8]}{'...' if len(header) > 8 else ''}"
+        )
+        _log(
+            f"    filter_col={filter_col!r} present={filter_col in header if filter_col else 'n/a'} "
+            f"raw_rows={raw_rows} kept_rows={len(result)}"
+        )
+        return result
 
     def _needed_investor_ids(self) -> set[str]:
         cir = self.table("CompanyInvestorRelation")
@@ -190,6 +204,7 @@ class FullExtractRelationalSource(RelationalSource):
             return self._cache[name]
 
         path = self.extract_dir / f"{name}.csv"
+        _log(f"[T4.0] load table {name}: {path} exists={path.exists()}")
         if not path.exists():
             self._cache[name] = pd.DataFrame()
             return self._cache[name]

@@ -78,7 +78,36 @@ FULL_EXTRACT_FILTER_COL = {
 INVESTOR_COUNTRY_CANDIDATES = ["HQCountry", "Country"]
 
 # --- Outputs --------------------------------------------------------------
-OUTPUT_DIR = REPO_ROOT / "data" / "outputs"
+# Default output directory. Resolution order (first existing parent wins):
+#   1. env var T4_OUTPUT_DIR
+#   2. the target machine's OneDrive empirical-analysis folder
+#   3. <repo>/data/outputs
+# The --output-dir CLI flag overrides all of these at runtime.
+_OUTPUT_DIR_CANDIDATES = [
+    r"C:\Users\nastj\OneDrive - Universitat Ramón Llull\ESADE\MIM\Thesis Folder Structure\09_Python_Empirical Analysis",
+]
+
+
+def _resolve_output_dir() -> Path:
+    env = os.environ.get("T4_OUTPUT_DIR")
+    # The hard-coded OneDrive candidate is a Windows path; only consider it on
+    # Windows. On POSIX a backslash path collapses to a single-component name
+    # whose parent (".") always exists, which would be a false positive.
+    win_candidates = _OUTPUT_DIR_CANDIDATES if os.name == "nt" else []
+    candidates = ([env] if env else []) + win_candidates
+    for cand in candidates:
+        try:
+            path = Path(cand)
+            # Accept if the leaf exists, or its parent tree exists (write_outputs
+            # creates the leaf dir itself).
+            if path.exists() or path.parent.exists():
+                return path
+        except OSError:
+            continue
+    return REPO_ROOT / "data" / "outputs"
+
+
+OUTPUT_DIR = _resolve_output_dir()
 
 # --- Population constants --------------------------------------------------
 # Spec/HANDOVER load-bearing anchors (full Chapter 3 inputs).
@@ -140,6 +169,8 @@ ANCHOR_TOLERANCE_PP = 1.0  # percentage points
 
 # --- Engineering ----------------------------------------------------------
 CHUNKSIZE = 400_000
+# When True, the full-extract source logs per-table file paths and row counts.
+VERBOSE = False
 COHORT_BINS = [
     (2016, 2018, "2016-2018"),
     (2019, 2021, "2019-2021"),
