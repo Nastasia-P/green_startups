@@ -7,10 +7,16 @@ company fields from the real merged population):
 
     python -m empirical_analysis.chapter4.run --mode fixture
 
-Full run against the 43-table extract (set config.FULL_EXTRACT_DIR or pass
---extract-dir):
+Full run against the 43-table extract. The extract directory resolves in this
+order: --extract-dir flag > PITCHBOOK_EXTRACT_DIR env var > the target machine's
+OneDrive folder > <repo>/data/raw (see config._resolve_extract_dir).
 
+    # target machine (auto-detects the OneDrive esade_20260707 folder):
+    python -m empirical_analysis.chapter4.run --mode full
+
+    # explicit path or env var override:
     python -m empirical_analysis.chapter4.run --mode full --extract-dir /path/to/pitchbook
+    PITCHBOOK_EXTRACT_DIR=/path/to/pitchbook python -m empirical_analysis.chapter4.run --mode full
 """
 
 from __future__ import annotations

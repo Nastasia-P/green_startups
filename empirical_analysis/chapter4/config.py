@@ -7,6 +7,7 @@ and `empirical_analysis/HANDOVER.md`.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # Repository root: chapter4/config.py -> chapter4 -> empirical_analysis -> repo
@@ -21,9 +22,32 @@ LEDGER = REPO_ROOT / "data" / "outputs" / "startup_population_green_classificati
 FIXTURE = REPO_ROOT / "empirical_analysis" / "preview_summary.csv"
 
 # --- Full 43-table extract (not committed; set to run on real data) -------
-# Default directory to drop the raw tables into (Deal.csv, Investor.csv, ...).
-# Override with --extract-dir on the CLI or by reassigning this at runtime.
-FULL_EXTRACT_DIR: Path | None = REPO_ROOT / "data" / "raw"
+# Directory holding the raw tables (Deal.csv, Investor.csv, ...). Resolution
+# order (first existing wins):
+#   1. env var PITCHBOOK_EXTRACT_DIR
+#   2. the target machine's OneDrive extract folder
+#   3. <repo>/data/raw
+# The --extract-dir CLI flag overrides all of these at runtime.
+_EXTRACT_DIR_CANDIDATES = [
+    r"C:\Users\nastj\OneDrive - Universitat Ramón Llull\ESADE\MIM\Thesis Folder Structure\02_Data\esade_20260707",
+    str(REPO_ROOT / "data" / "raw"),
+]
+
+
+def _resolve_extract_dir() -> Path:
+    env = os.environ.get("PITCHBOOK_EXTRACT_DIR")
+    candidates = ([env] if env else []) + _EXTRACT_DIR_CANDIDATES
+    for cand in candidates:
+        try:
+            path = Path(cand)
+            if path.exists():
+                return path
+        except OSError:
+            continue
+    return REPO_ROOT / "data" / "raw"
+
+
+FULL_EXTRACT_DIR: Path | None = _resolve_extract_dir()
 
 # Columns actually needed per raw table (intersected with the real header at
 # read time). Keeps memory bounded on the large tables (spec §A2).
