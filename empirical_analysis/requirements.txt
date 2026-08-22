@@ -1,0 +1,5 @@
+# Python dependencies for the empirical analysis pipeline.
+# Install with:  pip install -r empirical_analysis/requirements.txt
+pandas>=2.2
+pyarrow>=15.0
+pytest>=8.0
