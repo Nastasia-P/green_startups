@@ -133,6 +133,10 @@ DEAL_TYPE_EXCLUSIONS = {
     "Share Repurchase",
     "Secondary Transaction",
 }
+# PitchBook suffixes these families ("Secondary Transaction - Open Market",
+# "Bankruptcy: Admin/Reorg", ...), so they are matched by prefix. Without this
+# the variants are treated as financing and inflate every funding measure.
+DEAL_TYPE_EXCLUSION_PREFIXES = ("Secondary Transaction", "Bankruptcy")
 
 # --- Deal stage taxonomy ---------------------------------------------------
 # DealType -> stage_group. Any value not listed here is reported in
@@ -153,14 +157,22 @@ STAGE_GROUP_MAP = {
     "Mezzanine": "Growth/PE",
     "GP Stakes": "Growth/PE",
     "Leveraged Recap": "Growth/PE",
+    "Leveraged Recapitalization": "Growth/PE",
     "Dividend Recap": "Growth/PE",
+    "Dividend Recapitalization": "Growth/PE",
     "Debt - General": "Debt",
     "Debt - Acquisition": "Debt",
     "Debt Refinancing": "Debt",
     "Debt Repayment": "Debt",
     "Debt - Spinoff": "Debt",
+    "Debt - PPP": "Debt",
+    "Debt - Merger": "Debt",
     "Convertible Debt": "Debt",
+    "Vendor Loan": "Debt",
+    # Bridge financing in this extract is a bridge loan, not an equity round.
+    "Bridge": "Debt",
     "Sale-Lease back": "Debt",
+    "Sale-Lease back facility": "Debt",
     "Equity Crowdfunding": "Crowdfunding",
     "Product Crowdfunding": "Crowdfunding",
     "University Spin-Out": "Spin-out/Corporate",
@@ -175,11 +187,13 @@ STAGE_GROUP_MAP = {
     "Working Capital": "Other",
     "General Corporate Purpose": "Other",
     "Continuation Fund": "Other",
+    "Continuation Fund Transaction": "Other",
     "PIPE": "Other",
     "Reverse Merger": "Other",
     "Merger of Equals": "Other",
     "Debt Conversion": "Other",
     "Investor Buyout by Mgmt": "Other",
+    "Investor Buyout by Management": "Other",
 }
 UNMAPPED_STAGE_GROUP = "Unmapped"
 
@@ -188,21 +202,53 @@ UNMAPPED_STAGE_GROUP = "Unmapped"
 # Other/Unclassified and are reported in investor_types_seen.csv.
 INVESTOR_TYPE_GRP = {
     "Venture Capital": "Independent VC",
+    # Public / government, including state-backed and academic investors.
     "Government": "Public/Government",
     "Not-For-Profit Venture Capital": "Public/Government",
+    "University": "Public/Government",
+    "Sovereign Wealth Fund": "Public/Government",
+    "SBIC": "Public/Government",
+    # Corporate balance-sheet investors.
     "Corporation": "Corporate",
     "Corporate Venture Capital": "Corporate",
     "PE-Backed Company": "Corporate",
+    "VC-Backed Company": "Corporate",
+    "Holding Company": "Corporate",
+    "Corporate Development": "Corporate",
+    # Private equity and growth capital.
     "PE/Buyout": "PE/Growth",
     "Growth/Expansion": "PE/Growth",
     "Infrastructure": "PE/Growth",
+    "Mezzanine": "PE/Growth",
+    "Other Private Equity": "PE/Growth",
+    "Fundless Sponsor": "PE/Growth",
+    "Merchant Banking Firm": "PE/Growth",
+    "Secondary Buyer": "PE/Growth",
+    "Real Estate": "PE/Growth",
     "Accelerator/Incubator": "Accelerator/Incubator",
+    # Private wealth.
     "Individual": "Angel",
     "Angel Group": "Angel",
     "Angel (individual)": "Angel",
+    # Kept separate rather than folded into Angel: family offices invest at a
+    # different scale and are worth seeing on their own.
+    "Family Office": "Family Office",
+    # Kept separate because it is directly relevant to the green question.
+    "Impact Investing": "Impact Investing",
+    # Debt providers.
     "Lender/Debt Provider": "Lender/Debt",
     "Commercial Bank": "Lender/Debt",
+    "Investment Bank": "Lender/Debt",
+    "Business Development Company": "Lender/Debt",
+    "Leasing": "Lender/Debt",
+    # Financial vehicles that are not a direct financing relationship.
     "Asset Manager": "Other/Unclassified",
+    "Hedge Fund": "Other/Unclassified",
+    "Mutual Fund": "Other/Unclassified",
+    "Fund of Funds": "Other/Unclassified",
+    "Limited Partner": "Other/Unclassified",
+    "Special Purpose Acquisition Company (SPAC)": "Other/Unclassified",
+    "Other": "Other/Unclassified",
 }
 UNCLASSIFIED_INVESTOR_GRP = "Other/Unclassified"
 

@@ -72,7 +72,12 @@ These are the only filters Step 1 applies. Each is logged with rows in and rows 
 | 1 | **Population** | `CompanyID` must be one of the 116,005 study firms | The raw tables are global; everything else is out of scope |
 | 2 | **Completed** | `DealStatus == "Completed"` | Drops *Announced / In Progress* and *Failed / Cancelled*. Announced deals may never close |
 | 3 | **Valid date** | `DealDate` must parse and fall on or before **2026-07-07** (the extract date) | Removes missing and forward-dated errors |
-| 4 | **Real financing** | `DealType` must NOT be one of: `IPO`, `Merger/Acquisition`, `Share Repurchase`, `Secondary Transaction`, `Bankruptcy: Liquidation`, `Out of Business` | These are not new capital going into the firm |
+| 4 | **Real financing** | `DealType` must NOT be one of: `IPO`, `Merger/Acquisition`, `Share Repurchase`, `Out of Business`; and must NOT start with `Secondary Transaction` or `Bankruptcy` | These are not new capital going into the firm |
+
+**Prefix matching note.** PitchBook writes suffixed variants such as
+`Secondary Transaction - Open Market` and `Bankruptcy: Admin/Reorg`. Matching those two
+families on exact strings alone lets the variants through as if they were financing, which
+inflates deal counts and every funding total downstream. They are matched by prefix.
 
 **Date parsing note.** Dates are tried as `MM/DD/YYYY` first, then re-tried with automatic
 format detection for anything that failed. Without that fallback, a differently formatted
@@ -163,12 +168,15 @@ Both are applied in Step 1 so every later step uses identical definitions.
 | Angel/Seed | Seed Round; Angel (individual); Restart - Angel |
 | Early-stage VC | Early Stage VC; Restart - Early VC |
 | Later-stage VC | Later Stage VC; Restart - Later VC |
-| Growth/PE | PE Growth/Expansion; Buyout/LBO; Mezzanine; GP Stakes; Leveraged Recap; Dividend Recap |
-| Debt | Debt - General; Debt - Acquisition; Debt Refinancing; Debt Repayment; Debt - Spinoff; Convertible Debt; Sale-Lease back |
+| Growth/PE | PE Growth/Expansion; Buyout/LBO; Mezzanine; GP Stakes; Leveraged Recap(italization); Dividend Recap(italization) |
+| Debt | Debt - General; Debt - Acquisition; Debt - Spinoff; Debt - PPP; Debt - Merger; Debt Refinancing; Debt Repayment; Convertible Debt; Vendor Loan; Bridge; Sale-Lease back (facility) |
 | Crowdfunding | Equity Crowdfunding; Product Crowdfunding (plus anything containing "Crowdfunding") |
 | Spin-out/Corporate | University Spin-Out; Spin-Off; Corporate; Joint Venture; Platform Creation; Corporate Asset Purchase |
-| Other | Project Financing; Capitalization; Capital Spending; Working Capital; General Corporate Purpose; Continuation Fund; PIPE; Reverse Merger; Merger of Equals; Debt Conversion; Investor Buyout by Mgmt |
-| *(removed by filter 4)* | IPO; Merger/Acquisition; Share Repurchase; Secondary Transaction; Bankruptcy: Liquidation; Out of Business |
+| Other | Project Financing; Capitalization; Capital Spending; Working Capital; General Corporate Purpose; Continuation Fund (Transaction); PIPE; Reverse Merger; Merger of Equals; Debt Conversion; Investor Buyout by Mgmt/Management |
+| *(removed by filter 4)* | IPO; Merger/Acquisition; Share Repurchase; Out of Business; anything starting with Secondary Transaction or Bankruptcy |
+
+`Bridge` is grouped with **Debt**: in this extract it denotes a bridge loan rather than an
+equity bridge round.
 
 Anything not on this list is labelled `Unmapped` and reported, never silently absorbed
 into "Other".
@@ -182,13 +190,23 @@ funding comparison.
 | `investor_type_grp` | `PrimaryInvestorType` values |
 |---|---|
 | Independent VC | Venture Capital |
-| Public/Government | Government; Not-For-Profit Venture Capital |
-| Corporate | Corporation; Corporate Venture Capital; PE-Backed Company |
-| PE/Growth | PE/Buyout; Growth/Expansion; Infrastructure |
+| Public/Government | Government; Not-For-Profit Venture Capital; University; Sovereign Wealth Fund; SBIC |
+| Corporate | Corporation; Corporate Venture Capital; PE-Backed Company; VC-Backed Company; Holding Company; Corporate Development |
+| PE/Growth | PE/Buyout; Growth/Expansion; Infrastructure; Mezzanine; Other Private Equity; Fundless Sponsor; Merchant Banking Firm; Secondary Buyer; Real Estate |
 | Accelerator/Incubator | Accelerator/Incubator |
 | Angel | Individual; Angel Group; Angel (individual) |
-| Lender/Debt | Lender/Debt Provider; Commercial Bank |
-| Other/Unclassified | Asset Manager, and anything unlisted |
+| Family Office | Family Office |
+| Impact Investing | Impact Investing |
+| Lender/Debt | Lender/Debt Provider; Commercial Bank; Investment Bank; Business Development Company; Leasing |
+| Other/Unclassified | Asset Manager; Hedge Fund; Mutual Fund; Fund of Funds; Limited Partner; SPAC; Other; and anything unlisted |
+
+**Family Office and Impact Investing are their own groups.** Family offices deploy at a
+different scale from individual angels, and impact investors are directly relevant to the
+green question, so both would lose their meaning if absorbed into a broader bucket.
+
+**`SBIC` is placed under Public/Government** because the government-backed leverage is its
+defining feature here, though the funds are privately managed. Reclassify in `config.py` if
+you prefer to treat it as a private lender.
 
 ---
 

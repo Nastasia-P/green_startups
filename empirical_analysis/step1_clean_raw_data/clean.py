@@ -73,6 +73,19 @@ def _mask(condition: pd.Series) -> pd.Series:
     return condition.fillna(False).astype(bool)
 
 
+def _is_excluded_deal_type(deal_type: pd.Series) -> pd.Series:
+    """True for deal types that are not new capital into the firm (filter 4).
+
+    Matches the exact exclusion list plus the prefixed families, because
+    PitchBook writes variants like "Secondary Transaction - Open Market".
+    """
+    s = deal_type.astype("string").str.strip()
+    excluded = _mask(s.isin(config.DEAL_TYPE_EXCLUSIONS))
+    for prefix in config.DEAL_TYPE_EXCLUSION_PREFIXES:
+        excluded = excluded | _mask(s.str.startswith(prefix, na=False))
+    return excluded
+
+
 def _stage_group(deal_type: pd.Series) -> pd.Series:
     """Map DealType to its stage group; anything unlisted is marked Unmapped."""
     s = deal_type.astype("string").str.strip()
@@ -127,7 +140,7 @@ def build_deals_clean(
 
     # Filter 4: drop deal types that are not new capital into the firm.
     if "DealType" in d.columns:
-        d = d[~_mask(d["DealType"].str.strip().isin(config.DEAL_TYPE_EXCLUSIONS))]
+        d = d[~_is_excluded_deal_type(d["DealType"])]
     funnel["after_real_financing"] = len(d)
 
     if d.empty:
@@ -176,7 +189,7 @@ def _deal_type_enumeration(
     rows = []
     for value, n in type_counts.items():
         value_s = MISSING_LABEL if pd.isna(value) or str(value) == "" else str(value)
-        excluded = value_s in config.DEAL_TYPE_EXCLUSIONS
+        excluded = bool(_is_excluded_deal_type(pd.Series([value_s], dtype="string")).iloc[0])
         grp = _stage_group(pd.Series([value_s], dtype="string")).iloc[0]
         rows.append(
             {
@@ -472,7 +485,12 @@ def acceptance_report(result: Step1Result, company_merged: Path | None = None) -
             f"  cross-check vs non-null FirstFinancingDealID in the company file: {expected}"
         )
         if expected and abs(n_financed - expected) / expected > 0.10:
-            lines.append("  WARN: differs by more than 10% - a filter may be dropping too much")
+            gap = expected - n_financed
+            lines.append(
+                f"  NOTE: {gap} firms have a FirstFinancingDealID but no deal surviving "
+                "filters 2-4 (not completed, unusable date, or an excluded type). "
+                "Expected; compare against the funnel above before treating as an error."
+            )
 
     unmapped_deals = result.deal_types_seen
     if not unmapped_deals.empty and "is_mapped" in unmapped_deals.columns:

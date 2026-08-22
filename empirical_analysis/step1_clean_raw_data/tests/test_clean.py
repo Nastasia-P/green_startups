@@ -174,6 +174,66 @@ def test_unmapped_types_are_flagged(population):
     assert seen.loc["IPO", "excluded_by_filter"]
 
 
+def test_suffixed_secondary_and_bankruptcy_variants_are_excluded(population):
+    """PitchBook suffixes these families; every variant must fail filter 4."""
+    ids = population["company_id"].head(3).tolist()
+    tables = _synthetic_tables(ids)
+    variants = [
+        "Secondary Transaction - Private",
+        "Secondary Transaction - Open Market",
+        "Secondary Transaction - Stock Distribution",
+        "Bankruptcy: Admin/Reorg",
+    ]
+    for i, deal_type in enumerate(variants):
+        tables["Deal"].loc[len(tables["Deal"])] = {
+            "CompanyID": ids[0], "DealID": f"X{i}", "DealDate": "06/01/2022",
+            "DealType": deal_type, "DealStatus": "Completed",
+            "DealSize": "3", "DealSizeStatus": "Actual",
+        }
+    result = build_all(DictSource(tables), population)
+
+    assert not set(result.tables["deals_clean"]["deal_id"]) & {f"X{i}" for i in range(4)}
+    seen = result.deal_types_seen.set_index("deal_type")
+    for deal_type in variants:
+        assert seen.loc[deal_type, "excluded_by_filter"]
+        assert seen.loc[deal_type, "n_kept"] == 0
+
+
+@pytest.mark.parametrize(
+    "deal_type,expected",
+    [
+        ("Leveraged Recapitalization", "Growth/PE"),
+        ("Dividend Recapitalization", "Growth/PE"),
+        ("Investor Buyout by Management", "Other"),
+        ("Continuation Fund Transaction", "Other"),
+        ("Sale-Lease back facility", "Debt"),
+        ("Debt - PPP", "Debt"),
+        ("Debt - Merger", "Debt"),
+        ("Vendor Loan", "Debt"),
+        ("Bridge", "Debt"),
+    ],
+)
+def test_real_deal_type_wordings_are_mapped(deal_type, expected):
+    assert config.STAGE_GROUP_MAP[deal_type] == expected
+
+
+@pytest.mark.parametrize(
+    "investor_type,expected",
+    [
+        ("University", "Public/Government"),
+        ("Sovereign Wealth Fund", "Public/Government"),
+        ("VC-Backed Company", "Corporate"),
+        ("Investment Bank", "Lender/Debt"),
+        ("Other Private Equity", "PE/Growth"),
+        ("Family Office", "Family Office"),
+        ("Impact Investing", "Impact Investing"),
+        ("Hedge Fund", "Other/Unclassified"),
+    ],
+)
+def test_real_investor_type_wordings_are_mapped(investor_type, expected):
+    assert config.INVESTOR_TYPE_GRP[investor_type] == expected
+
+
 def test_dates_parse_in_either_format():
     parsed = parse_deal_dates(pd.Series(["01/15/2020", "2020-01-15", "not a date", None]))
     assert parsed.iloc[0] == pd.Timestamp("2020-01-15")

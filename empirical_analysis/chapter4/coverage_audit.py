@@ -162,7 +162,11 @@ def _build_deal_sets(rel: RelationalSource) -> dict[str, set[str]]:
         d = d[d["_date"].notna() & (d["_date"] <= pd.Timestamp(config.EXTRACT_DATE))]
         _log(f"[T4.0] deal filter: after F3 (valid DealDate<={config.EXTRACT_DATE}) rows={len(d)}")
     if "DealType" in d.columns:  # F4
-        d = d[~d["DealType"].astype("string").str.strip().isin(config.DEAL_TYPE_EXCLUSIONS)]
+        dt = d["DealType"].astype("string").str.strip()
+        excluded = dt.isin(config.DEAL_TYPE_EXCLUSIONS).fillna(False)
+        for prefix in config.DEAL_TYPE_EXCLUSION_PREFIXES:
+            excluded = excluded | dt.str.startswith(prefix, na=False).fillna(False)
+        d = d[~excluded]
         _log(f"[T4.0] deal filter: after F4 (non-excluded DealType) rows={len(d)}")
 
     if d.empty:

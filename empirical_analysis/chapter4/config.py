@@ -165,25 +165,53 @@ DEAL_TYPE_EXCLUSIONS = {
     "Share Repurchase",
     "Secondary Transaction",
 }
+# PitchBook suffixes these families ("Secondary Transaction - Open Market",
+# "Bankruptcy: Admin/Reorg", ...), so they are matched by prefix. Kept in sync
+# with step1_clean_raw_data.config.
+DEAL_TYPE_EXCLUSION_PREFIXES = ("Secondary Transaction", "Bankruptcy")
 
 # --- Investor type grouping (spec Part V4) ---------------------------------
+# Kept in sync with step1_clean_raw_data.config.INVESTOR_TYPE_GRP.
 INVESTOR_TYPE_GRP = {
     "Venture Capital": "Independent VC",
     "Government": "Public/Government",
     "Not-For-Profit Venture Capital": "Public/Government",
+    "University": "Public/Government",
+    "Sovereign Wealth Fund": "Public/Government",
+    "SBIC": "Public/Government",
     "Corporation": "Corporate",
     "Corporate Venture Capital": "Corporate",
     "PE-Backed Company": "Corporate",
+    "VC-Backed Company": "Corporate",
+    "Holding Company": "Corporate",
+    "Corporate Development": "Corporate",
     "PE/Buyout": "PE/Growth",
     "Growth/Expansion": "PE/Growth",
     "Infrastructure": "PE/Growth",
+    "Mezzanine": "PE/Growth",
+    "Other Private Equity": "PE/Growth",
+    "Fundless Sponsor": "PE/Growth",
+    "Merchant Banking Firm": "PE/Growth",
+    "Secondary Buyer": "PE/Growth",
+    "Real Estate": "PE/Growth",
     "Accelerator/Incubator": "Accelerator/Incubator",
     "Individual": "Angel",
     "Angel Group": "Angel",
     "Angel (individual)": "Angel",
+    "Family Office": "Family Office",
+    "Impact Investing": "Impact Investing",
     "Lender/Debt Provider": "Lender/Debt",
     "Commercial Bank": "Lender/Debt",
+    "Investment Bank": "Lender/Debt",
+    "Business Development Company": "Lender/Debt",
+    "Leasing": "Lender/Debt",
     "Asset Manager": "Other/Unclassified",
+    "Hedge Fund": "Other/Unclassified",
+    "Mutual Fund": "Other/Unclassified",
+    "Fund of Funds": "Other/Unclassified",
+    "Limited Partner": "Other/Unclassified",
+    "Special Purpose Acquisition Company (SPAC)": "Other/Unclassified",
+    "Other": "Other/Unclassified",
 }
 
 # --- Coverage anchors (spec Part P4) --------------------------------------
