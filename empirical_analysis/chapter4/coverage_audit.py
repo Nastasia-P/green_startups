@@ -105,6 +105,8 @@ def _assemble_row(
     ratio = green_pct / other_pct if other_pct else float("nan")  # D-T4.0-7 guard
     if not other_pct:
         notes = (notes + " ratio undefined (other_pct=0)").strip()
+    # Per-variable source_table override (config.SOURCE_TABLE_BY_FIELD).
+    source_table = config.SOURCE_TABLE_BY_FIELD.get(label, source_table)
     return {
         "field": label,
         "variable_id": variable_id,

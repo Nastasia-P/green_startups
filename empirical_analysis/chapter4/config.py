@@ -119,6 +119,39 @@ SPEC_GREEN_STAGES = {"vertical": 6_636, "token": 834, "phrase": 836}
 GROUP_GREEN = "Green start-ups"
 GROUP_OTHER = "Other European start-ups"
 
+# --- Per-variable source_table label (editable) ---------------------------
+# The `source_table` column in the audit output. Keyed by the row's `field`
+# label. Edit any value here to change what provenance a given variable
+# reports (e.g. swap "Company" for "startups_stages_filtered" to cite the
+# derived European-startup dataset instead of the canonical PitchBook table).
+# A field missing from this map falls back to the default passed in code.
+SOURCE_TABLE_BY_FIELD = {
+    # Company-level scalar attributes (read from COMPANY_MERGED spine).
+    "year_founded": "Company",
+    "hq_country": "Company",
+    "hq_city": "Company",
+    "employees": "Company",
+    "business_status": "Company",
+    "primary_sector": "Company",
+    "total_raised": "Company",
+    "revenue": "Company",
+    "EBITDA": "Company",
+    # Relational presence rows.
+    "employee_history": "CompanyEmployeeHistoryRelation",
+    ">=1 deal record": "Deal",
+    "deal_size": "Deal",
+    "deal_size actual": "Deal",
+    "first_deal_date": "Deal",
+    "investor relation present": "CompanyInvestorRelation",
+    "investor type matched": "Investor",
+    "investor country matched": "Investor",
+    # §P4 validation anchors.
+    "FirstFinancingDealType": "Company",
+    "Verticals": "Company",
+    "FirstFinancingDate": "Company",
+    "ActiveInvestors": "Company",
+}
+
 # --- Deal filters (spec Part III) -----------------------------------------
 DEAL_STATUS_COMPLETED = "Completed"           # F2
 EXTRACT_DATE = "2026-07-07"                    # F3 upper bound
