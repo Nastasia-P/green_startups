@@ -91,6 +91,9 @@ def _synthetic_tables(company_ids: list[str]) -> dict[str, pd.DataFrame]:
             # kept, and it is this firm's first deal
             {"CompanyID": c, "DealID": "D5", "DealDate": "05/01/2018", "DealType": "Grant",
              "DealStatus": "Completed", "DealSize": "", "DealSizeStatus": "Estimated"},
+            # kept: real data leaves these fields blank, which must not crash
+            {"CompanyID": c, "DealID": "D6", "DealDate": "07/01/2023", "DealType": "Seed Round",
+             "DealStatus": "Completed", "DealSize": None, "DealSizeStatus": None},
         ]
     )
     deal_investors = pd.DataFrame(
@@ -125,18 +128,22 @@ def test_filters_and_derived_columns(population):
     result = build_all(DictSource(_synthetic_tables(ids)), population)
 
     deals = result.tables["deals_clean"]
-    # Only D1 and D5 survive all four filters.
-    assert set(deals["deal_id"]) == {"D1", "D5"}
-    assert result.deal_funnel["after_population"] == 5
-    assert result.deal_funnel["after_completed"] == 4
-    assert result.deal_funnel["after_valid_date"] == 3
-    assert result.deal_funnel["after_real_financing"] == 2
+    # D1, D5 and D6 survive all four filters.
+    assert set(deals["deal_id"]) == {"D1", "D5", "D6"}
+    assert result.deal_funnel["after_population"] == 6
+    assert result.deal_funnel["after_completed"] == 5
+    assert result.deal_funnel["after_valid_date"] == 4
+    assert result.deal_funnel["after_real_financing"] == 3
 
     # Derived columns.
-    d1 = deals.set_index("deal_id").loc["D1"]
+    indexed = deals.set_index("deal_id")
+    d1 = indexed.loc["D1"]
     assert d1["stage_group"] == "Early-stage VC"
     assert d1["size_is_actual"] == 1
     assert d1["is_first_deal"] == 1
+    # A blank DealSizeStatus counts as "not actual" rather than crashing.
+    assert indexed.loc["D6", "size_is_actual"] == 0
+    assert indexed.loc["D6", "is_first_deal"] == 0
 
     # Deal investors: only financing roles, only surviving deals.
     di = result.tables["deal_investors_clean"]

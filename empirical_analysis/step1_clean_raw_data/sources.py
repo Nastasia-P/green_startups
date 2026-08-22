@@ -42,7 +42,7 @@ def parse_deal_dates(raw: pd.Series) -> pd.Series:
     """
     s = raw.astype("string")
     parsed = pd.to_datetime(s, format=config.DEAL_DATE_FORMAT, errors="coerce")
-    unparsed = parsed.isna() & nonnull_mask(s)
+    unparsed = (parsed.isna() & nonnull_mask(s)).fillna(False).astype(bool)
     if unparsed.any():
         parsed.loc[unparsed] = pd.to_datetime(s[unparsed], errors="coerce")
     return parsed

@@ -23,6 +23,10 @@ from . import config
 from .sources import RawSource, log, nonnull_mask, parse_deal_dates
 
 
+# How a blank/missing category is shown in the reference lists.
+MISSING_LABEL = "(missing)"
+
+
 @dataclass
 class AuditRow:
     table: str
@@ -58,6 +62,15 @@ def _as_numeric(df: pd.DataFrame, cols: list[str]) -> None:
     for c in cols:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
+
+
+def _mask(condition: pd.Series) -> pd.Series:
+    """A plain boolean mask. Missing values become False.
+
+    Comparisons on nullable string columns yield NA wherever the source was
+    missing, which cannot be used for row selection or cast to int.
+    """
+    return condition.fillna(False).astype(bool)
 
 
 def _stage_group(deal_type: pd.Series) -> pd.Series:
@@ -103,18 +116,18 @@ def build_deals_clean(
 
     # Filter 2: completed deals only.
     if "DealStatus" in d.columns:
-        d = d[d["DealStatus"].str.strip() == config.DEAL_STATUS_COMPLETED]
+        d = d[_mask(d["DealStatus"].str.strip() == config.DEAL_STATUS_COMPLETED)]
     funnel["after_completed"] = len(d)
 
     # Filter 3: a parseable date on or before the extract date.
     if "DealDate" in d.columns:
         d["deal_date"] = parse_deal_dates(d["DealDate"])
-        d = d[d["deal_date"].notna() & (d["deal_date"] <= pd.Timestamp(config.EXTRACT_DATE))]
+        d = d[_mask(d["deal_date"].notna() & (d["deal_date"] <= pd.Timestamp(config.EXTRACT_DATE)))]
     funnel["after_valid_date"] = len(d)
 
     # Filter 4: drop deal types that are not new capital into the firm.
     if "DealType" in d.columns:
-        d = d[~d["DealType"].str.strip().isin(config.DEAL_TYPE_EXCLUSIONS)]
+        d = d[~_mask(d["DealType"].str.strip().isin(config.DEAL_TYPE_EXCLUSIONS))]
     funnel["after_real_financing"] = len(d)
 
     if d.empty:
@@ -123,7 +136,7 @@ def build_deals_clean(
     d = d.rename(columns={"CompanyID": "company_id", "DealID": "deal_id"})
     d["stage_group"] = _stage_group(d["DealType"]) if "DealType" in d.columns else pd.NA
     if "DealSizeStatus" in d.columns:
-        d["size_is_actual"] = (d["DealSizeStatus"].str.strip() == "Actual").astype("int64")
+        d["size_is_actual"] = _mask(d["DealSizeStatus"].str.strip() == "Actual").astype("int64")
     _as_numeric(d, ["DealSize", "PostValuation", "Investors", "NewInvestors", "DealNo"])
     d = d.rename(
         columns={
@@ -140,7 +153,7 @@ def build_deals_clean(
     )
     # First deal per firm, by date.
     first_date = d.groupby("company_id")["deal_date"].transform("min")
-    d["is_first_deal"] = (d["deal_date"] == first_date).astype("int64")
+    d["is_first_deal"] = _mask(d["deal_date"] == first_date).astype("int64")
 
     keep = [
         "company_id", "deal_id", "deal_date", "deal_type", "deal_type_2", "deal_class",
@@ -162,7 +175,7 @@ def _deal_type_enumeration(
         )
     rows = []
     for value, n in type_counts.items():
-        value_s = "" if pd.isna(value) else str(value)
+        value_s = MISSING_LABEL if pd.isna(value) or str(value) == "" else str(value)
         excluded = value_s in config.DEAL_TYPE_EXCLUSIONS
         grp = _stage_group(pd.Series([value_s], dtype="string")).iloc[0]
         rows.append(
@@ -189,7 +202,7 @@ def build_deal_investors_clean(source: RawSource, surviving_deal_ids: set[str]) 
     d = raw.copy()
     _as_string(d, ["DealID", "InvestorID", "InvestorName", "InvestorStatus", "IsLeadInvestor"])
     if "InvestorStatus" in d.columns:
-        d = d[d["InvestorStatus"].str.strip().isin(config.DEAL_INVESTOR_STATUS_KEEP)]
+        d = d[_mask(d["InvestorStatus"].str.strip().isin(config.DEAL_INVESTOR_STATUS_KEEP))]
     d = d.rename(
         columns={
             "DealID": "deal_id",
@@ -210,7 +223,7 @@ def build_company_investors_clean(source: RawSource, population_ids: set[str]) -
     d = raw.copy()
     _as_string(d, ["CompanyID", "InvestorID", "InvestorName", "InvestorStatus", "Holding"])
     if "InvestorStatus" in d.columns:
-        d = d[~d["InvestorStatus"].str.strip().isin(config.COMPANY_INVESTOR_STATUS_DROP)]
+        d = d[~_mask(d["InvestorStatus"].str.strip().isin(config.COMPANY_INVESTOR_STATUS_DROP))]
     d = d.rename(
         columns={
             "CompanyID": "company_id",
@@ -267,20 +280,22 @@ def build_investors_clean(
     d = d[[c for c in keep if c in d.columns]].reset_index(drop=True)
 
     unclassified = float(
-        100.0 * (d["investor_type_grp"] == config.UNCLASSIFIED_INVESTOR_GRP).mean()
+        100.0 * _mask(d["investor_type_grp"] == config.UNCLASSIFIED_INVESTOR_GRP).mean()
     ) if len(d) else float("nan")
 
-    enum_rows = [
-        {
-            "primary_investor_type": "" if pd.isna(v) else str(v),
-            "n_investors": int(n),
-            "investor_type_grp": config.INVESTOR_TYPE_GRP.get(
-                "" if pd.isna(v) else str(v), config.UNCLASSIFIED_INVESTOR_GRP
-            ),
-            "is_mapped": ("" if pd.isna(v) else str(v)) in config.INVESTOR_TYPE_GRP,
-        }
-        for v, n in type_counts.items()
-    ]
+    enum_rows = []
+    for v, n in type_counts.items():
+        raw_value = "" if pd.isna(v) else str(v)
+        enum_rows.append(
+            {
+                "primary_investor_type": MISSING_LABEL if raw_value == "" else raw_value,
+                "n_investors": int(n),
+                "investor_type_grp": config.INVESTOR_TYPE_GRP.get(
+                    raw_value, config.UNCLASSIFIED_INVESTOR_GRP
+                ),
+                "is_mapped": raw_value in config.INVESTOR_TYPE_GRP,
+            }
+        )
     enumeration = (
         pd.DataFrame(enum_rows).sort_values("n_investors", ascending=False).reset_index(drop=True)
         if enum_rows
