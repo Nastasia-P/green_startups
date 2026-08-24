@@ -14,7 +14,8 @@ step maps to the thesis output register.
 |---|---|---|---|
 | 1 | `step1_clean_raw_data` | 8 clean relational tables | done |
 | 2 | `step2_firm_table` | `company_analysis.parquet` (1 row per firm) | done |
-| 3-7 | `step3..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
+| 3 | `step3_firm_characteristics` | firm-characteristic tables (T4.1-T4.5, F4.1) + sample register | done |
+| 4-7 | `step4..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
 
 ## Prerequisites
 
@@ -37,10 +38,7 @@ reference lists and an audit. Full spec:
 [`specs/step1_clean_raw_data/design.md`](specs/step1_clean_raw_data/design.md).
 
 ```bash
-# smoke test on the committed sample (no raw extract needed)
-python -m empirical_analysis.step1_clean_raw_data.run --mode fixture
-
-# full run against the real extract
+# run against the raw extract
 python -m empirical_analysis.step1_clean_raw_data.run --mode full
 ```
 
@@ -79,6 +77,52 @@ Paths resolve automatically; override if needed:
 
 Outputs: `company_analysis.parquet`, `step2_coverage.csv` (per-column completeness,
 green vs other), `step2_audit.csv`.
+
+## Step 3 — Firm characteristics
+
+Describes the two groups (green vs other European start-ups) before any funding
+comparison: how old they are, how large, what they do, and where they sit in the
+business-status and industry mix. This establishes whether a later funding gap could
+be a composition effect (younger, larger, or capital-heavy firms) rather than a green
+effect. Descriptive only — it computes no new per-firm variables and no funding
+amounts; those come in later steps.
+
+Reads the Step 2 firm table (`company_analysis.parquet`) plus three Step 1 clean
+tables (`industries_clean`, `verticals_clean`, `deals_clean`).
+
+```bash
+# build from the local Step 2 + Step 1 outputs
+python -m empirical_analysis.step3_firm_characteristics.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4
+
+# on the target machine, the OneDrive paths resolve on their own
+python -m empirical_analysis.step3_firm_characteristics.run
+```
+
+Paths resolve automatically; override if needed:
+
+- firm table: `--firm-table` > `STEP3_FIRM_TABLE` > OneDrive `09_...\company_analysis.parquet` > `data/outputs/company_analysis.parquet`
+- clean tables: `--clean-dir` > `STEP2_CLEAN_DIR` > OneDrive `09_...\clean_tables` > `data/outputs/clean_tables` > `data/interim`
+- output dir: `--output-dir` > `STEP3_OUTPUT_DIR` > OneDrive `09_...\chapter4_outputs` > `data/outputs/chapter4`
+
+What to expect (CSV files in the output dir):
+
+| File | Contents |
+|---|---|
+| `T4_00_sample_register.csv` | For every Chapter 4 statistic: the population used, effective n (total / green / other), the inclusion rule, and why |
+| `T4_01_master_descriptive.csv` | n, founding year/age, employees, business status, top industries, financing status, green vs other |
+| `T4_02_business_status.csv` | business-status distribution, green vs other (raw, ungrouped) |
+| `T4_03_industry_composition.csv` | industry mix; percentages can exceed 100% (firms carry multiple tags) |
+| `T4_04_green_subsegments.csv` | green population broken down by PitchBook vertical |
+| `T4_05_employment_by_cohort.csv` | median employees by founding cohort, green vs other |
+| `F4_01_green_share_by_cohort.csv` | green share per founding cohort (cohort composition, not a time trend) |
+| `captions.csv` | fixed captions that must travel with the figures |
+
+Every statistic reports its own n, and missing values are treated as unknown (never
+zero). The run ends by printing an acceptance report; a correct run shows 8,306 green
+/ 107,699 other (116,005 total) and the cohort green counts summing to 8,306.
 
 ## Acceptance anchors
 
