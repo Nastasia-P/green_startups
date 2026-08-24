@@ -15,8 +15,8 @@ This roadmap is the crosswalk.
 ```
 Step 1  Clean raw data          DONE   -> 8 clean relational tables
 Step 2  Firm-level table        DONE   -> company_analysis.parquet (1 row per firm)
-Step 3  Firm characteristics    TODO   -> areas 1, 2, 3
-Step 4  Geography               TODO   -> area 4
+Step 3  Firm characteristics    DONE   -> areas 1, 2, 3
+Step 4  Geography               DONE   -> area 4
 Step 5  Funding                 TODO   -> areas 5, 6, 7
 Step 6  Investors and grants    TODO   -> areas 8, 9
 Step 7  Verification            TODO   -> cross-table reconciliation
@@ -39,6 +39,11 @@ coverage asymmetry reproduced (employees 82% green vs 50% other; total_raised 59
 
 ## Step 3 — Firm characteristics (areas 1-3)
 
+Spec written: `empirical_analysis/specs/step3_firm_characteristics/design.md`.
+Implemented: module `empirical_analysis/step3_firm_characteristics/` (run with
+`python -m empirical_analysis.step3_firm_characteristics.run`). Verified on the full
+firm table: 8,306 green / 107,699 other, cohort green-share and coverage anchors reproduced.
+
 Module `step3_firm_characteristics`. Reads `company_analysis`, plus
 `industries_clean`, `verticals_clean`, `employee_history_clean` where a relational cut
 is needed.
@@ -54,18 +59,25 @@ is needed.
 
 ## Step 4 — Geography (area 4)
 
-Module `step4_geography`. Reads `company_analysis`. Country denominators use the
-116,005 population (rule N9), minimum 500 firms per country and 100 per city
-(decision D4).
+Spec written: `empirical_analysis/specs/step4_geography/design.md`. Implemented: module
+`empirical_analysis/step4_geography/` (run with
+`python -m empirical_analysis.step4_geography.run`). Reads `company_analysis` plus a
+committed Eurostat population file (`data/sources/eurostat_population.csv`, refreshed
+with `python -m empirical_analysis.step4_geography.fetch_eurostat`). Country
+denominators use the 116,005 population (rule N9), minimum 500 firms per country and
+100 per city (decision D4); the location-quotient reference is fixed at the EU level.
+Verified on the full firm table: 20 countries at >=500 firms, Spearman(startups per
+million, green intensity) ~ -0.63 on the 18 population-matched countries (UK and Russia
+kept with NA).
 
 | Output | Register | Content |
 |---|---|---|
-| `F4_02_green_count_by_country.pdf` | F4.2 | N green by country |
-| `T4_06_country_specialisation.csv` | T4.6 | share of European green, green intensity, location quotient |
-| `F4_03_lq_by_country.pdf` | F4.3 | location quotient ranked/choropleth |
-| `T4_07_per_capita_crosscheck.csv` | T4.7 | startups per capita (needs external Eurostat populations) |
-| `T4_08_concentration.csv` | T4.8 | top-5 country share, green vs other |
-| `AP2_city_ranking.csv` | AP2 | city count, share, intensity (>=100 firms) |
+| `F4_02_green_count_by_country.csv` | F4.2 | N green by country (figure data; PDF is a later cosmetic step) |
+| `T4_06_country_specialisation.csv` | T4.6 | share of European green, green intensity, location quotient (+ Stage 1 / Stage 2+3 variants, R1) |
+| `F4_03_lq_by_country.csv` | F4.3 | location quotient ranked, with the LQ=1 reference (figure data) |
+| `T4_07_per_capita_crosscheck.csv` | T4.7 | startups/green per capita from Eurostat `demo_pjan`; unmatched countries kept with NA |
+| `T4_08_concentration.csv` | T4.8 | top-5/top-10 country and top-5 city shares, green vs other (own denominators) |
+| `AP2_city_ranking.csv` | AP2 | city count, share, intensity, modal country (>=100 firms) |
 
 ## Step 5 — Funding (areas 5, 6, 7)
 
@@ -129,8 +141,10 @@ the reporting steps.
 2. **Debt lender types.** `DealDebtLenderRelation.csv` is one of the 36 raw tables Step
    1 does not read. Area 9's lender-type breakdown needs it added as a ninth clean
    table in Step 1 (`USECOLS`, `FILTER_COL`, a `build_relation_clean` call).
-3. **Eurostat populations.** T4.7 (per-capita cross-check) needs external country
-   population data, not in the PitchBook extract.
+3. **Eurostat populations.** RESOLVED. T4.7 (per-capita cross-check) reads a committed
+   `data/sources/eurostat_population.csv` (Eurostat `demo_pjan`, fetched by
+   `step4_geography.fetch_eurostat`). The UK is unavailable after 2020 and is kept with
+   NA; refresh the year if a UK figure becomes needed.
 
 ## Rules and decisions that constrain every step
 

@@ -15,7 +15,8 @@ step maps to the thesis output register.
 | 1 | `step1_clean_raw_data` | 8 clean relational tables | done |
 | 2 | `step2_firm_table` | `company_analysis.parquet` (1 row per firm) | done |
 | 3 | `step3_firm_characteristics` | firm-characteristic tables (T4.1-T4.5, F4.1) + sample register | done |
-| 4-7 | `step4..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
+| 4 | `step4_geography` | geography tables (T4.6-T4.8, AP2, F4.2, F4.3) | done |
+| 5-7 | `step5..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
 
 ## Prerequisites
 
@@ -123,6 +124,57 @@ What to expect (CSV files in the output dir):
 Every statistic reports its own n, and missing values are treated as unknown (never
 zero). The run ends by printing an acceptance report; a correct run shows 8,306 green
 / 107,699 other (116,005 total) and the cohort green counts summing to 8,306.
+
+## Step 4 — Geography
+
+Describes *where* European green start-ups are, and separates two things raw counts
+conflate: **size** (how many green firms a country has) and **specialisation** (how
+green its start-up base is relative to Europe, via the location quotient). A country
+can be large and unremarkable or small and highly specialised — the location quotient
+routinely inverts the raw-count ranking (in the current data the UK leads by green
+count but Finland, Spain and Switzerland lead by specialisation). Descriptive only.
+
+Reads the Step 2 firm table (`company_analysis.parquet`) plus a committed Eurostat
+population file (`data/sources/eurostat_population.csv`) for the per-capita
+cross-check. Country denominators use the full 116,005 population; a country needs
+≥500 start-ups to get a row and a city ≥100.
+
+```bash
+# optional: refresh the Eurostat population file (needs network)
+python -m empirical_analysis.step4_geography.fetch_eurostat
+
+# build from the local Step 2 output
+python -m empirical_analysis.step4_geography.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --population data/sources/eurostat_population.csv \
+    --output-dir data/outputs/chapter4
+
+# on the target machine, the OneDrive paths resolve on their own
+python -m empirical_analysis.step4_geography.run
+```
+
+Paths resolve automatically; override if needed:
+
+- firm table: `--firm-table` > `STEP4_FIRM_TABLE` > OneDrive `09_...\company_analysis.parquet` > `data/outputs/company_analysis.parquet`
+- population: `--population` > `STEP4_POPULATION` > `data/sources/eurostat_population.csv`
+- output dir: `--output-dir` > `STEP4_OUTPUT_DIR` > OneDrive `09_...\chapter4_outputs` > `data/outputs/chapter4`
+
+What to expect (CSV files in the output dir):
+
+| File | Contents |
+|---|---|
+| `T4_06_country_specialisation.csv` | per country (≥500 firms): green count, share of European green, green intensity, location quotient, plus Stage 1 / Stage 2+3 LQ variants |
+| `T4_07_per_capita_crosscheck.csv` | same countries joined to Eurostat population: start-ups and green per million; unmatched countries (Russia, the post-2020 UK) kept with NA |
+| `T4_08_concentration.csv` | top-5 / top-10 country and top-5 city shares, green vs other, each on its own denominator |
+| `AP2_city_ranking.csv` | per city (≥100 firms): green count, share, intensity, modal country |
+| `F4_02_green_count_by_country.csv` | figure data: absolute green count by country |
+| `F4_03_lq_by_country.csv` | figure data: location quotient by country, with the LQ=1 reference line |
+| `captions_step4.csv` | fixed captions that must travel with the tables/figures |
+
+The location quotient uses the fixed EU-wide reference (green / population); `lq > 1`
+means a country is more green-specialised than Europe overall. The run ends by printing
+an acceptance report; a correct run shows 20 countries at ≥500 firms and a
+Spearman(start-ups per million, green intensity) of about −0.63.
 
 ## Acceptance anchors
 
