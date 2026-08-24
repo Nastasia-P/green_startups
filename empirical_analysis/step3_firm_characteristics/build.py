@@ -69,10 +69,11 @@ def _row(characteristic, green_stat, green_n, other_stat, other_n, difference):
     return {
         "characteristic": characteristic,
         "green_stat": green_stat,
-        "green_n": green_n,
         "other_stat": other_stat,
-        "other_n": other_n,
         "difference": difference,
+        "n_green": int(green_n),
+        "n_others": int(other_n),
+        "n_startups": int(green_n) + int(other_n),
     }
 
 
@@ -166,10 +167,11 @@ def build_green_share_by_cohort(firm: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "cohort": label,
-                "n_green": n_green,
-                "n_all": n_all,
                 "green_share": round(n_green / n_all, 4) if n_all else float("nan"),
                 "overall_benchmark": config.GREEN_BENCHMARK,
+                "n_green": n_green,
+                "n_others": n_all - n_green,
+                "n_startups": n_all,
             }
         )
     return pd.DataFrame(rows)
@@ -194,14 +196,17 @@ def _status_distribution(g: pd.DataFrame, o: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "business_status": status,
-                "green_n": gn, "green_pct": round(gs, 4),
-                "other_n": on, "other_pct": round(os_, 4),
+                "green_pct": round(gs, 4),
+                "other_pct": round(os_, 4),
                 "pp_difference": _pp(gs, os_),
+                "n_green": gn,
+                "n_others": on,
+                "n_startups": gn + on,
             }
         )
     out = pd.DataFrame(rows)
     if not out.empty:
-        out = out.sort_values("green_n", ascending=False).reset_index(drop=True)
+        out = out.sort_values("n_green", ascending=False).reset_index(drop=True)
     return out
 
 
@@ -229,8 +234,8 @@ def _industry_composition(
     industries: pd.DataFrame, green_by_company: pd.Series, level_col: str, label: str
 ) -> pd.DataFrame:
     cols = [
-        label, "green_n", "green_pct_of_green", "other_n", "other_pct_of_other",
-        "lq", "n_firms_tagged",
+        label, "green_pct_of_green", "other_pct_of_other", "lq",
+        "n_green", "n_others", "n_startups",
     ]
     if industries.empty or level_col not in industries.columns:
         return pd.DataFrame(columns=cols)
@@ -262,17 +267,17 @@ def _industry_composition(
         rows.append(
             {
                 label: value,
-                "green_n": gn,
                 "green_pct_of_green": round(gn / green_firms_tagged, 4) if green_firms_tagged else float("nan"),
-                "other_n": on,
                 "other_pct_of_other": round(on / other_firms_tagged, 4) if other_firms_tagged else float("nan"),
                 "lq": lq,
-                "n_firms_tagged": sector_total,
+                "n_green": gn,
+                "n_others": on,
+                "n_startups": sector_total,
             }
         )
     out = pd.DataFrame(rows, columns=cols)
     if not out.empty:
-        out = out.sort_values("green_n", ascending=False).reset_index(drop=True)
+        out = out.sort_values("n_green", ascending=False).reset_index(drop=True)
     return out
 
 
@@ -342,6 +347,7 @@ def build_employment_by_cohort(firm: pd.DataFrame) -> pd.DataFrame:
         sub = firm[firm["cohort"] == label]
         g, o = _split(sub)
         row = {"cohort": label}
+        n_by_group = {}
         for prefix, part in (("green", g), ("other", o)):
             med, n = _median(part["employees"])
             q25, _ = _quantile(part["employees"], 0.25)
@@ -349,12 +355,16 @@ def build_employment_by_cohort(firm: pd.DataFrame) -> pd.DataFrame:
             row[f"{prefix}_median_employees"] = med
             row[f"{prefix}_q25"] = q25
             row[f"{prefix}_q75"] = q75
-            row[f"{prefix}_n"] = n
+            n_by_group[prefix] = n
             band_known = int(_present(part["employee_band"]).sum())
             for band in config.EMPLOYEE_BAND_ORDER:
                 hit = int((part["employee_band"] == band).sum())
                 key = f"{prefix}_share_{band}"
                 row[key] = round(hit / band_known, 4) if band_known else float("nan")
+        # Uniform sample-size trio (firms with a known employee count).
+        row["n_green"] = n_by_group["green"]
+        row["n_others"] = n_by_group["other"]
+        row["n_startups"] = n_by_group["green"] + n_by_group["other"]
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -420,14 +430,14 @@ def acceptance_report(result: Step3Result) -> list[str]:
             )
     t41 = result.tables["T4_01_master_descriptive"].set_index("characteristic")
     if "n_firms" in t41.index:
-        gn = int(t41.loc["n_firms", "green_n"]); on = int(t41.loc["n_firms", "other_n"])
+        gn = int(t41.loc["n_firms", "n_green"]); on = int(t41.loc["n_firms", "n_others"])
         lines.append(f"T4.1 n_firms: green={gn} other={on} total={gn + on} "
                      f"(expected green={config.GREEN_TOTAL}, total={config.POP_TOTAL})")
         if gn != config.GREEN_TOTAL or gn + on != config.POP_TOTAL:
             lines.append("  WARN: firm counts differ from the expected population")
 
     f41 = result.tables["F4_01_green_share_by_cohort"]
-    green_sum = int(f41["n_green"].sum()); all_sum = int(f41["n_all"].sum())
+    green_sum = int(f41["n_green"].sum()); all_sum = int(f41["n_startups"].sum())
     lines.append(f"F4.1 cohorts: {len(f41)} rows, green across cohorts={green_sum}, "
                  f"all={all_sum}")
     if green_sum != config.GREEN_TOTAL:

@@ -22,7 +22,8 @@ from .build import acceptance_report, build_all, write_outputs
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Step 3: firm characteristics (T4.1-T4.5, F4.1).")
     p.add_argument("--firm-table", type=Path, default=None,
-                   help="Path to company_analysis.parquet (Step 2 output).")
+                   help="Path to company_analysis.parquet, or the Step 2 output "
+                        "directory that contains it.")
     p.add_argument("--clean-dir", type=Path, default=None,
                    help="Directory with Step 1 clean parquet tables.")
     p.add_argument("--output-dir", type=Path, default=None,
@@ -35,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     config.VERBOSE = args.verbose
 
-    firm_table = args.firm_table or config.FIRM_TABLE
+    firm_table = sources.resolve_firm_table(args.firm_table or config.FIRM_TABLE)
     clean_dir = args.clean_dir or config.CLEAN_DIR
     output_dir = args.output_dir or config.OUTPUT_DIR
 

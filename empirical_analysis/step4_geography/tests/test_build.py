@@ -77,7 +77,8 @@ def test_country_specialisation_lq_uses_full_population_reference():
     # Germany intensity 0.5; EU reference is 4/9 (Italy's green firm counted), so
     # lq = 0.5 / (4/9) = 1.125.  If Italy were dropped from the denominator the
     # reference would be 3/8 and lq would read 1.333 -> this pins rule N9.
-    assert t46.loc["Germany", "green_n"] == 2
+    assert t46.loc["Germany", "n_green"] == 2
+    assert t46.loc["Germany", "n_others"] == 2
     assert t46.loc["Germany", "n_startups"] == 4
     assert t46.loc["Germany", "green_intensity"] == 0.5
     assert t46.loc["Germany", "lq"] == 1.125
@@ -131,7 +132,8 @@ def test_city_ranking_minimum_and_modal_country():
     # Berlin (3) and Paris (2) clear the minimum; Munich/Lyon/Rome (1) and the blank
     # city do not.
     assert set(ap2i.index) == {"Berlin", "Paris"}
-    assert ap2i.loc["Berlin", "green_n"] == 2
+    assert ap2i.loc["Berlin", "n_green"] == 2
+    assert ap2i.loc["Berlin", "n_others"] == 1
     assert ap2i.loc["Berlin", "n_startups"] == 3
     assert ap2i.loc["Berlin", "country"] == "Germany"
 

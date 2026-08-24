@@ -79,12 +79,14 @@ def _verticals_frame() -> pd.DataFrame:
 
 def test_master_descriptive_split_and_n():
     t41 = build_master_descriptive(_firm_frame()).set_index("characteristic")
-    assert t41.loc["n_firms", "green_n"] == 2
-    assert t41.loc["n_firms", "other_n"] == 3
+    assert t41.loc["n_firms", "n_green"] == 2
+    assert t41.loc["n_firms", "n_others"] == 3
+    assert t41.loc["n_firms", "n_startups"] == 5
     # median employees: green {8,40}=24, other {300,15}=157.5 (F4 missing dropped)
     assert t41.loc["median_employees", "green_stat"] == 24.0
-    assert t41.loc["median_employees", "green_n"] == 2
-    assert t41.loc["median_employees", "other_n"] == 2
+    assert t41.loc["median_employees", "n_green"] == 2
+    assert t41.loc["median_employees", "n_others"] == 2
+    assert t41.loc["median_employees", "n_startups"] == 4
 
 
 def test_master_descriptive_band_shares_use_known_denominator():
@@ -97,7 +99,8 @@ def test_master_descriptive_band_shares_use_known_denominator():
 def test_green_share_by_cohort():
     f41 = build_green_share_by_cohort(_firm_frame()).set_index("cohort")
     assert f41.loc["2016-2018", "n_green"] == 1
-    assert f41.loc["2016-2018", "n_all"] == 2
+    assert f41.loc["2016-2018", "n_others"] == 1
+    assert f41.loc["2016-2018", "n_startups"] == 2
     assert f41.loc["2016-2018", "green_share"] == 0.5
     assert f41.loc["2019-2021", "green_share"] == 0.5
     assert (f41["overall_benchmark"] == config.GREEN_BENCHMARK).all()
@@ -116,8 +119,8 @@ def test_industry_keeps_multitag_firms():
     tables = build_industry_tables(firm, _industries_frame())
     sec = tables["T4_03_industry_composition"].set_index("industry_sector")
     # Energy carries both green firms (F1, F2); Software carries F1 via its 2nd tag.
-    assert sec.loc["Energy", "green_n"] == 2
-    assert sec.loc["Software", "green_n"] == 1
+    assert sec.loc["Energy", "n_green"] == 2
+    assert sec.loc["Software", "n_green"] == 1
     # Green firms tagged = 2 (F1, F2); shares over green sum > 1 due to F1 double tag.
     assert round(sec["green_pct_of_green"].sum(), 3) > 1.0
 

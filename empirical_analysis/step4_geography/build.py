@@ -77,18 +77,19 @@ def build_country_specialisation(
 
     grp = work.groupby("country")
     agg = grp.agg(
-        green_n=("green", "sum"),
+        n_green=("green", "sum"),
         n_startups=("green", "size"),
         green_stage1_n=("stage1", "sum"),
         green_stage23_n=("stage23", "sum"),
     ).reset_index()
 
     agg = agg[agg["n_startups"] >= min_n].copy()
+    agg["n_others"] = agg["n_startups"] - agg["n_green"]
 
     agg["share_of_european_green"] = (
-        agg["green_n"] / n_green_total if n_green_total else float("nan")
+        agg["n_green"] / n_green_total if n_green_total else float("nan")
     ).round(4)
-    agg["green_intensity"] = (agg["green_n"] / agg["n_startups"]).round(4)
+    agg["green_intensity"] = (agg["n_green"] / agg["n_startups"]).round(4)
     agg["lq"] = (agg["green_intensity"] / eu_ref).round(3) if eu_ref else float("nan")
     agg["lq_stage1"] = (
         (agg["green_stage1_n"] / agg["n_startups"]) / eu_ref_s1
@@ -96,13 +97,14 @@ def build_country_specialisation(
     agg["lq_stage2plus3"] = (
         (agg["green_stage23_n"] / agg["n_startups"]) / eu_ref_s23
     ).round(3) if eu_ref_s23 else float("nan")
-    agg["low_n_flag"] = (agg["green_n"] < config.LOW_N_FLAG).astype(int)
+    agg["low_n_flag"] = (agg["n_green"] < config.LOW_N_FLAG).astype(int)
 
     cols = [
-        "country", "green_n", "n_startups", "share_of_european_green",
-        "green_intensity", "lq", "lq_stage1", "lq_stage2plus3", "low_n_flag",
+        "country", "share_of_european_green", "green_intensity", "lq",
+        "lq_stage1", "lq_stage2plus3", "low_n_flag",
+        "n_green", "n_others", "n_startups",
     ]
-    out = agg[cols].sort_values("green_n", ascending=False).reset_index(drop=True)
+    out = agg[cols].sort_values("n_green", ascending=False).reset_index(drop=True)
     log(f"[step4] T4.6: {len(out)} countries with n>={min_n}")
     return out
 
@@ -114,13 +116,15 @@ def build_per_capita(
     t46: pd.DataFrame, population: pd.DataFrame
 ) -> pd.DataFrame:
     cols = [
-        "country", "population_m", "n_startups", "green_n",
-        "startups_per_million", "green_per_million", "green_intensity", "lq",
+        "country", "population_m", "startups_per_million", "green_per_million",
+        "green_intensity", "lq", "n_green", "n_others", "n_startups",
     ]
     if t46.empty:
         return pd.DataFrame(columns=cols)
 
-    out = t46[["country", "n_startups", "green_n", "green_intensity", "lq"]].copy()
+    out = t46[
+        ["country", "n_startups", "n_green", "n_others", "green_intensity", "lq"]
+    ].copy()
     out["geo_code"] = out["country"].map(config.COUNTRY_TO_EUROSTAT)
 
     if population is not None and not population.empty:
@@ -133,7 +137,7 @@ def build_per_capita(
 
     out["population_m"] = (out["population"] / 1_000_000).round(3)
     out["startups_per_million"] = (out["n_startups"] / out["population_m"]).round(1)
-    out["green_per_million"] = (out["green_n"] / out["population_m"]).round(2)
+    out["green_per_million"] = (out["n_green"] / out["population_m"]).round(2)
 
     out = out[cols].sort_values("n_startups", ascending=False).reset_index(drop=True)
     matched = int(out["population_m"].notna().sum())
@@ -218,7 +222,7 @@ def build_city_ranking(
 
     grp = work.groupby("city")
     agg = grp.agg(
-        green_n=("green", "sum"),
+        n_green=("green", "sum"),
         n_startups=("green", "size"),
     ).reset_index()
 
@@ -232,17 +236,18 @@ def build_city_ranking(
     agg = agg.merge(modal, on="city", how="left")
 
     agg = agg[agg["n_startups"] >= min_n].copy()
+    agg["n_others"] = agg["n_startups"] - agg["n_green"]
     agg["share_of_european_green"] = (
-        agg["green_n"] / n_green_total if n_green_total else float("nan")
+        agg["n_green"] / n_green_total if n_green_total else float("nan")
     ).round(4)
-    agg["green_intensity"] = (agg["green_n"] / agg["n_startups"]).round(4)
-    agg["low_n_flag"] = (agg["green_n"] < config.LOW_N_FLAG).astype(int)
+    agg["green_intensity"] = (agg["n_green"] / agg["n_startups"]).round(4)
+    agg["low_n_flag"] = (agg["n_green"] < config.LOW_N_FLAG).astype(int)
 
     cols = [
-        "city", "country", "green_n", "n_startups", "share_of_european_green",
-        "green_intensity", "low_n_flag",
+        "city", "country", "share_of_european_green", "green_intensity",
+        "low_n_flag", "n_green", "n_others", "n_startups",
     ]
-    out = agg[cols].sort_values("green_n", ascending=False).reset_index(drop=True)
+    out = agg[cols].sort_values("n_green", ascending=False).reset_index(drop=True)
     log(f"[step4] AP2: {len(out)} cities with n>={min_n}")
     return out
 
@@ -252,13 +257,14 @@ def build_city_ranking(
 # --------------------------------------------------------------------------
 def build_green_count_figure(t46: pd.DataFrame) -> pd.DataFrame:
     """F4.2: absolute green count by country, ranked as T4.6."""
-    return t46[["country", "green_n"]].copy()
+    return t46[["country", "n_green", "n_others", "n_startups"]].copy()
 
 
 def build_lq_figure(t46: pd.DataFrame) -> pd.DataFrame:
     """F4.3: location quotient by country, ranked by lq descending."""
-    out = t46[["country", "lq"]].copy()
+    out = t46[["country", "lq", "n_green", "n_others", "n_startups"]].copy()
     out["reference"] = 1.0
+    out = out[["country", "lq", "reference", "n_green", "n_others", "n_startups"]]
     return out.sort_values("lq", ascending=False).reset_index(drop=True)
 
 
@@ -328,7 +334,7 @@ def acceptance_report(result: Step4Result) -> list[str]:
 
     t46 = result.tables["T4_06_country_specialisation"]
     n_startups_sum = int(t46["n_startups"].sum())
-    green_sum = int(t46["green_n"].sum())
+    green_sum = int(t46["n_green"].sum())
     lines.append(
         f"T4.6: {len(t46)} countries with n>={config.MIN_COUNTRY_N}; "
         f"included n_startups={n_startups_sum} of {config.POP_TOTAL}, "
@@ -336,8 +342,8 @@ def acceptance_report(result: Step4Result) -> list[str]:
     )
     if not t46.empty:
         top = t46.iloc[0]
-        lines.append(f"  top by green_n: {top['country']} "
-                     f"(green_n={int(top['green_n'])}, lq={top['lq']})")
+        lines.append(f"  top by n_green: {top['country']} "
+                     f"(n_green={int(top['n_green'])}, lq={top['lq']})")
         n_sens = int((t46["n_startups"] >= config.MIN_COUNTRY_N_SENSITIVITY).sum())
         lines.append(f"  sensitivity: {n_sens} countries would remain at n>="
                      f"{config.MIN_COUNTRY_N_SENSITIVITY}")
@@ -370,7 +376,7 @@ def acceptance_report(result: Step4Result) -> list[str]:
     lines.append(f"AP2: {len(ap2)} cities with n>={config.MIN_CITY_N}")
     if not ap2.empty:
         top = ap2.iloc[0]
-        lines.append(f"  top by green_n: {top['city']} ({top['country']}, "
-                     f"green_n={int(top['green_n'])})")
+        lines.append(f"  top by n_green: {top['city']} ({top['country']}, "
+                     f"n_green={int(top['n_green'])})")
 
     return lines
