@@ -383,8 +383,71 @@ def _presence(series: pd.Series) -> pd.Series:
     return series.notna()
 
 
+# Provenance of every firm-table column: which Step 2 input it comes from, and the
+# rule that produces it. `origin` names the source table(s); `derivation` states the
+# rule. This travels with step2_coverage.csv so the coverage numbers are self-explaining.
+#   - "spine"                = company spine CSV (startups_stages_filtered.csv)
+#   - "green classification" = the green-label file (loaded as population_key, from
+#                              startup_population_green_classification_strong_terms.csv)
+#   - "deals_clean" etc.     = Step 1 clean tables
+#   - "derived"              = computed in Step 2 build.py from the columns named
+_COLUMN_PROVENANCE: dict[str, tuple[str, str]] = {
+    "green": ("green classification", "1 = firm labelled a green start-up, 0 = not (strong-terms classifier)"),
+    "green_stage": ("green classification", "which detection stage flagged the firm as green"),
+    "green_signal_group": ("green classification", "Stage 1 = matched a green vertical; Stage 2+3 = matched a green text signal"),
+    "year_founded": ("spine", "renamed from YearFounded"),
+    "age_years": ("derived", "REFERENCE_YEAR - year_founded"),
+    "cohort": ("derived", "founding-year bins (COHORT_BINS)"),
+    "hq_country": ("spine", "renamed from HQCountry"),
+    "hq_city": ("spine", "renamed from HQCity"),
+    "employees": ("spine", "renamed from Employees"),
+    "employee_band": ("derived", "size bins of employees (EMPLOYEE_BANDS)"),
+    "business_status": ("spine", "renamed from BusinessStatus"),
+    "primary_sector": ("spine", "renamed from PrimaryIndustrySector"),
+    "primary_industry_group": ("spine", "renamed from PrimaryIndustryGroup"),
+    "primary_industry_code": ("spine", "renamed from PrimaryIndustryCode"),
+    "total_raised": ("spine", "renamed from TotalRaised"),
+    "n_deals": ("deals_clean", "count of qualifying deals per firm"),
+    "n_rounds_vc": ("deals_clean", "count of VC-stage deals per firm"),
+    "financed": ("derived", "n_deals >= 1"),
+    "any_vc": ("deals_clean", "max over deals of stage_group in VC set"),
+    "any_grant": ("deals_clean", "max over deals of stage_group == Grant"),
+    "any_debt": ("deals_clean", "max over deals of deal_class/stage == Debt"),
+    "any_accelerator": ("deals_clean", "max over deals of stage_group == Accelerator/Incubator"),
+    "any_growth_pe": ("deals_clean", "max over deals of stage_group == Growth/PE"),
+    "any_crowdfunding": ("deals_clean", "max over deals of stage_group == Crowdfunding"),
+    "first_deal_date": ("deals_clean", "earliest deal_date per firm"),
+    "first_deal_type": ("deals_clean", "deal_type of the earliest deal"),
+    "first_deal_size": ("deals_clean", "deal_size of the earliest deal (may be null)"),
+    "last_deal_date": ("deals_clean", "latest deal_date per firm"),
+    "last_deal_type": ("deals_clean", "deal_type of the latest deal"),
+    "last_deal_size": ("deals_clean", "deal_size of the latest deal (may be null)"),
+    "median_deal_size": ("deals_clean", "median deal_size over deals with a size"),
+    "total_deal_size_obs": ("deals_clean", "sum of observed deal_size (NA if none observed)"),
+    "n_deals_with_size": ("deals_clean", "count of deals with a recorded deal_size"),
+    "first_vc_date": ("deals_clean", "earliest deal_date among VC-stage deals"),
+    "first_funding_lag": ("derived", "year(first_deal_date) - year_founded; negatives -> NA"),
+    "first_vc_lag": ("derived", "year(first_vc_date) - year_founded; negatives -> NA"),
+    "n_investors_lifetime": ("company_investors_clean", "distinct investor_id per firm"),
+    "any_public_investor": ("company_investors_clean x investors_clean", "max of investor_type_grp in Public set"),
+    "any_corporate_investor": ("company_investors_clean x investors_clean", "max of investor_type_grp == Corporate"),
+    "any_ivc_investor": ("company_investors_clean x investors_clean", "max of investor_type_grp == Independent VC"),
+    "any_accelerator_investor": ("company_investors_clean x investors_clean", "max of investor_type_grp == Accelerator/Incubator"),
+    "any_lender_investor": ("company_investors_clean x investors_clean", "max of investor_type_grp == Lender/Debt"),
+    "share_investors_domestic": ("company_investors_clean x investors_clean (+ spine hq_country)", "share of located investors in the firm's country"),
+    "share_investors_eu_cross_border": ("company_investors_clean x investors_clean (+ spine hq_country)", "share of located investors European but not domestic"),
+    "share_investors_non_european": ("company_investors_clean x investors_clean (+ spine hq_country)", "share of located investors outside Europe"),
+    "public_private_lifetime": ("derived", "any_public_investor AND (any_corporate_investor OR any_ivc_investor)"),
+    "public_private_same_deal": ("deal_investors_clean x investors_clean x deals_clean", "firm has a deal carrying both a public and a private investor"),
+}
+
+
 def _coverage_report(firm: pd.DataFrame) -> pd.DataFrame:
-    """Per-column non-null share, split green vs other, to expose the T4.0 asymmetry."""
+    """Per-column non-null share, split green vs other, to expose the T4.0 asymmetry.
+
+    Each row also carries where the column comes from (`origin`) and the rule that
+    produces it (`derivation`), so the coverage table is self-documenting.
+    """
     is_green = _mask(firm.get("green", pd.Series(0, index=firm.index)) == 1)
     n_green = int(is_green.sum())
     n_other = int((~is_green).sum())
@@ -393,9 +456,12 @@ def _coverage_report(firm: pd.DataFrame) -> pd.DataFrame:
         if col == "company_id":
             continue
         present = _presence(firm[col])
+        origin, derivation = _COLUMN_PROVENANCE.get(col, ("unmapped", ""))
         rows.append(
             {
                 "column": col,
+                "origin": origin,
+                "derivation": derivation,
                 "pct_all": round(100.0 * present.mean(), 1) if len(firm) else float("nan"),
                 "pct_green": round(100.0 * present[is_green].mean(), 1) if n_green else float("nan"),
                 "pct_other": round(100.0 * present[~is_green].mean(), 1) if n_other else float("nan"),

@@ -18,7 +18,7 @@ Step 2  Firm-level table        DONE   -> company_analysis.parquet (1 row per fi
 Step 3  Firm characteristics    DONE   -> areas 1, 2, 3
 Step 4  Geography               DONE   -> area 4
 Step 5  Funding                 DONE   -> areas 5, 6, 7
-Step 6  Investors and grants    TODO   -> areas 8, 9
+Step 6  Investors and grants    DONE   -> areas 8, 9
 Step 7  Verification            TODO   -> cross-table reconciliation
 ```
 
@@ -107,20 +107,40 @@ about as fast as others (median 1 year) but first VC more slowly (2 vs 1).
 R3 (repeat headline funding within industry) is deferred; `primary_sector` is present
 in `company_analysis` so it can be added later without new inputs.
 
-## Step 6 — Investors and grants (areas 8, 9)
+## Step 6 — Investors and grants (areas 8, 9) — DONE
 
-Module `step6_investors`. Reads `company_analysis`, `deal_investors_clean`,
-`investors_clean`.
+Module `step6_investors`. Reads `company_analysis` plus four Step 1 clean tables:
+`deals_clean` (grant/VC dates, stage-group round counts), `company_investors_clean`
+and `investors_clean` (relation grain for type and origin), and
+`deal_investors_clean` (lead flag per round). Master population is the INVESTED
+subsample (`n_investors_lifetime >= 1`), the investor-side analogue of Step 5's
+financed subsample. Spec: `specs/step6_investors/design.md`.
 
 | Output | Register | Content |
 |---|---|---|
-| `T4_18_investor_type_distribution.csv` | T4.18 | investor_type_grp distribution, green vs other |
+| `T4_18_investor_type_distribution.csv` | T4.18 | investor_type_grp distribution (relation share + firm-with-≥1), green vs other, R1 split |
 | `T4_19_investor_flags.csv` | T4.19 | company-level any public/corporate/IVC/accelerator/lender, median distinct investors |
-| `T4_21_public_private.csv` | T4.21 | lifetime combination vs same-deal co-investment, reported separately |
+| `T4_21_public_private.csv` | T4.21 | lifetime combination vs same-deal co-investment, reported separately, plus ratio |
 | `T4_22_grant_to_vc.csv` | T4.22 | grant->VC sequencing; share with prior grant among VC-backed. Descriptive, not causal |
-| `T4_23_investor_origin.csv` | T4.23 | domestic / EU cross-border / non-European shares |
-| `T4_25_syndication.csv` | T4.25 | investors per round, multi-investor share, within stage_group |
-| `F4_05_investor_participation.pdf` | F4.5 | investor-type participation, green vs other |
+| `T4_23_investor_origin.csv` | T4.23 | domestic / EU cross-border / non-European shares (known-country only) |
+| `T4_25_syndication.csv` | T4.25 | investors per round, multi-investor share, lead presence, within stage_group |
+| `F4_05_investor_participation.csv` | F4.5 | figure data: investor-type participation (firm-with-≥1), green vs other |
+
+Verified on the local build: INVESTED subsample 50,815 (green 7,585 / other 43,230);
+T4.19 flag shares reconcile with firm-column means; T4.18 investor relations 194,531,
+Other/Unclassified relation share 2.6% (well under 10%); grant-and-VC population 3,960;
+T4.23 origin shares sum to 1 within group at 92.9% country coverage. Headline findings:
+green firms lean more on accelerators (+11.8 pp firms), public/government (+9.3 pp) and
+impact investors (+8.9 pp), combine public and private capital more often (15.7% vs
+8.8% lifetime), and are more domestic / European and less non-European (-5.8 pp on the
+non-European relation share) — coherent with the Draghi framing.
+
+**Deferred (same posture as Step 5's R3, no new inputs blocked):** T4.20 (investor
+composition by green subsegment), T4.24 (non-European participation by stage), T4.26
+(green share of firms vs green share of capital by country — the geography x finance
+bridge, decision D6), and F4.6 main-text figure selection (decision D7). The debt
+lender-type breakdown remains blocked on a Step 1 amendment to read
+`DealDebtLenderRelation.csv` (see open items).
 
 ## Step 7 — Verification
 
