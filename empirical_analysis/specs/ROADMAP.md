@@ -17,7 +17,7 @@ Step 1  Clean raw data          DONE   -> 8 clean relational tables
 Step 2  Firm-level table        DONE   -> company_analysis.parquet (1 row per firm)
 Step 3  Firm characteristics    DONE   -> areas 1, 2, 3
 Step 4  Geography               DONE   -> area 4
-Step 5  Funding                 TODO   -> areas 5, 6, 7
+Step 5  Funding                 DONE   -> areas 5, 6, 7
 Step 6  Investors and grants    TODO   -> areas 8, 9
 Step 7  Verification            TODO   -> cross-table reconciliation
 ```
@@ -81,21 +81,31 @@ kept with NA).
 
 ## Step 5 — Funding (areas 5, 6, 7)
 
-Module `step5_funding`. Reads `company_analysis` and `deals_clean` (for deal-level
-cuts). Every lifetime measure is reported within cohort (rule N4); amount comparisons
-run on the financed subsample (rule N1); medians primary (rule N6).
+Spec written: `empirical_analysis/specs/step5_funding/design.md`. Implemented: module
+`empirical_analysis/step5_funding/` (run with
+`python -m empirical_analysis.step5_funding.run`). Reads `company_analysis` and
+`deals_clean` (for deal-level cuts). Access is measured on the full population (rule
+N2); amounts, sizes, valuations, lags and trajectories run on the financed subsample
+(rule N1); every lifetime measure is within cohort (rule N4); horizon and follow-on
+measures are censored (rule R4); medians primary (rule N6). Verified on the full firm
+table: financed subsample 47,714, T4.15 deals = 116,505, green reaches first financing
+about as fast as others (median 1 year) but first VC more slowly (2 vs 1).
 
 | Output | Register | Content |
 |---|---|---|
-| `T4_09_funding_access.csv` | T4.9 | access flags: any financing/VC/grant/debt/accelerator/growth-PE/crowdfunding |
-| `T4_10_total_raised_by_cohort.csv` | T4.10 | total_raised n/median/Q25/Q75/mean/P90 by cohort |
-| `T4_11_first_financing_size_by_stage.csv` | T4.11 | first financing size by stage_group |
-| `T4_13_time_to_financing.csv` | T4.13 | first_funding_lag and first_vc_lag, median and distribution |
+| `T4_09_funding_access.csv` | T4.9 | access flags: any financing/VC/grant/debt/accelerator/growth-PE/crowdfunding (+ R1 stage split) |
+| `T4_10_total_raised_by_cohort.csv` | T4.10 | total_raised (+ last/typical deal size) n/median/Q25/Q75/mean/P90 by cohort |
+| `T4_11_first_financing_size_by_stage.csv` | T4.11 | first financing size by stage_group, with the Actual share |
+| `T4_12_post_valuation.csv` | T4.12 | post-money valuation, green vs other; low coverage, n reported prominently |
+| `T4_13_time_to_financing.csv` | T4.13 | first_funding_lag and first_vc_lag, overall and by cohort |
 | `T4_14_first_financing_type.csv` | T4.14 | first financing type composition |
-| `T4_15_stage_composition.csv` | T4.15 | share of deals at each stage_group |
-| `T4_16_median_deal_size_by_stage.csv` | T4.16 | median deal size by stage_group (incl. a Grant row: see additions) |
-| `T4_17_financing_trajectories.csv` | T4.17 | rounds per firm, inter-round intervals (censored, R4) |
-| `F4_04_cumulative_financed.pdf` | F4.4 | cumulative share financed by years since founding |
+| `T4_15_stage_composition.csv` | T4.15 | share of deals at each stage_group (deal grain) |
+| `T4_16_median_deal_size_by_stage.csv` | T4.16 | median deal size by stage_group (incl. a Grant row) |
+| `T4_17_financing_trajectories.csv` | T4.17 | rounds per firm, inter-round intervals, stage progression (censored, R4) |
+| `F4_04_cumulative_financed.csv` | F4.4 | cumulative share financed (and VC-backed) by years since founding (figure data; PDF is a later cosmetic step) |
+
+R3 (repeat headline funding within industry) is deferred; `primary_sector` is present
+in `company_analysis` so it can be added later without new inputs.
 
 ## Step 6 — Investors and grants (areas 8, 9)
 

@@ -16,7 +16,8 @@ step maps to the thesis output register.
 | 2 | `step2_firm_table` | `company_analysis.parquet` (1 row per firm) | done |
 | 3 | `step3_firm_characteristics` | firm-characteristic tables (T4.1-T4.5, F4.1) + sample register | done |
 | 4 | `step4_geography` | geography tables (T4.6-T4.8, AP2, F4.2, F4.3) | done |
-| 5-7 | `step5..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
+| 5 | `step5_funding` | funding tables (T4.9-T4.17 incl. T4.12, F4.4) | done |
+| 6-7 | `step6..step7` | Chapter 4 exhibits | planned (see ROADMAP) |
 
 ## Prerequisites
 
@@ -175,6 +176,60 @@ The location quotient uses the fixed EU-wide reference (green / population); `lq
 means a country is more green-specialised than Europe overall. The run ends by printing
 an acceptance report; a correct run shows 20 countries at ≥500 firms and a
 Spearman(start-ups per million, green intensity) of about −0.63.
+
+## Step 5 — Funding
+
+The core of the chapter: does green start-ups' financing differ from other European
+start-ups? It follows **access -> amount -> timing/stage -> trajectory**. The central
+design choice is that **access is measured on the full 116,005 population, but amounts
+are compared only within the financed subsample** (firms with a real deal record).
+Green firms are 2-2.5x better documented, so comparing raw amounts across everyone
+would measure coverage, not capital. Missing funding is treated as unobserved, never as
+zero. Lifetime amounts are reported within founding cohort (a 2017 firm has had far
+longer to raise than a 2025 one); horizon and follow-on measures are censored to firms
+old enough to have a full observation window.
+
+Reads the Step 2 firm table (`company_analysis.parquet`) plus the Step 1 `deals_clean`
+table (for the deal-level stage and size cuts).
+
+```bash
+# build from the local Step 2 + Step 1 outputs
+python -m empirical_analysis.step5_funding.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4
+
+# on the target machine, the OneDrive paths resolve on their own
+python -m empirical_analysis.step5_funding.run
+```
+
+Paths resolve automatically; override if needed:
+
+- firm table: `--firm-table` > `STEP5_FIRM_TABLE` > OneDrive `09_...\company_analysis.parquet` > `data/outputs/company_analysis.parquet`
+- clean tables: `--clean-dir` > `STEP2_CLEAN_DIR` > OneDrive `09_...\clean_tables` > `data/outputs/clean_tables` > `data/interim`
+- output dir: `--output-dir` > `STEP5_OUTPUT_DIR` > OneDrive `09_...\chapter4_outputs` > `data/outputs/chapter4`
+
+What to expect (CSV files in the output dir):
+
+| File | Contents |
+|---|---|
+| `T4_09_funding_access.csv` | access flags (any financing / VC / grant / debt / accelerator / growth-PE / crowdfunding), green vs other, full population |
+| `T4_10_total_raised_by_cohort.csv` | total_raised (plus last and typical deal size) by cohort, financed subsample: median, IQR, mean, P90, ratio |
+| `T4_11_first_financing_size_by_stage.csv` | first deal size by stage, with the Actual-vs-Estimated share |
+| `T4_12_post_valuation.csv` | post-money valuation, green vs other; low coverage, so n is reported prominently |
+| `T4_13_time_to_financing.csv` | years to first financing and to first VC, overall and by cohort (the headline timing result) |
+| `T4_14_first_financing_type.csv` | composition of the first deal's stage, green vs other |
+| `T4_15_stage_composition.csv` | share of all deals at each stage (deal grain) |
+| `T4_16_median_deal_size_by_stage.csv` | median deal size by stage, incl. a Grant row |
+| `T4_17_financing_trajectories.csv` | rounds per firm, follow-on interval, stage progression (censored) |
+| `F4_04_cumulative_financed.csv` | figure data: cumulative share financed (and VC-backed) by years since founding |
+| `captions_step5.csv` | fixed captions that must travel with the tables |
+
+Every statistic reports its own n, amount tables carry only financed firms, and each
+table ends with `n_green`, `n_others`, `n_startups`. The run ends by printing an
+acceptance report; a correct run shows the financed subsample of 47,714, T4.15 deals
+equal to the `deals_clean` row count, and green reaching first financing about as fast
+as others but first VC more slowly.
 
 ## Acceptance anchors
 
