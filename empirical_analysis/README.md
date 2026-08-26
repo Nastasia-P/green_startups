@@ -19,7 +19,7 @@ step maps to the thesis output register.
 | 5 | `step5_funding` | funding tables (T4.9-T4.17 incl. T4.12, F4.4) | done |
 | 6 | `step6_investors` | investor & grant tables (T4.18-T4.19, T4.21-T4.23, T4.25, F4.5) | done |
 | 7 | `step7_geo_finance` | geography x finance (T4.26, T4.28, T4.29, F-data) + by-country comparison of all Step 5/6 tables | done |
-| 8 | `step8_verify` | cross-table reconciliation | planned (see ROADMAP) |
+| 8 | `step8_verify` | cross-table reconciliation (`step8_reconciliation.csv`) | done |
 
 ## Prerequisites
 
@@ -450,10 +450,11 @@ What to expect (CSV files in the output dir):
 | File | Contents |
 |---|---|
 | `T4_26_green_share_firms_vs_capital.csv` | per country: green share of firms vs green share of capital (both `total_raised` and disclosed `deal_size`, coverage shown), and the ratio |
+| `T4_10_cumulative_total_raised_by_country.csv` | per country: summed lifetime `total_raised` (USD m) for green, other, and total — recorded amounts only, not median or share |
 | `T4_28_investor_origin_by_country.csv` | per country: domestic / EU cross-border / non-European investor relation shares, green vs other (known-country only, coverage shown) |
 | `T4_29_country_funding_by_type.csv` | per country x stage: green / other / total disclosed deal capital and green amount share |
 | `F4_26_green_share_scatter.csv` | figure data: green firm share (x) vs green funding share (y) with the y = x reference |
-| `<table>_by_country.csv` (16 files) | block B: one row per country, headline statistic green vs other, for every Step 5/6 table |
+| `<table>_by_country.csv` (15 files) | block B: one row per country, headline statistic green vs other, for every Step 5/6 table (F4.4 excluded — multi-horizon curve stays in Step 5) |
 | `captions_step7.csv` | fixed captions that must travel with the tables |
 
 Every table ends with `n_green`, `n_others`, `n_startups` (the grain — firms, financed
@@ -475,6 +476,52 @@ capital-concentrated (ratio > 1) in the UK, Italy and the Netherlands among othe
 Because the country floor is off, small countries appear with `low_n_flag = 1` and are
 read as indicative; the two capital measures in T4.26 answer the funding-share question
 two ways, and both carry their coverage so a low share is not confused with a low count.
+
+## Step 8 — Verification
+
+Verification is distinct from robustness. Robustness (R1-R4) asks whether a finding
+survives a different sample; **verification asks whether the reported number is
+correct**. Step 8 reconciles counts and shares across every Chapter 4 table so no two
+tables contradict each other and no headline rests on an unflagged tiny cell. It adds
+no new analytical numbers.
+
+It is **self-contained**: it re-runs Steps 3-7 in-memory (each step's `build_all`, plus
+Step 7's by-country block) to get a canonical set of tables, then runs structural checks
+over them — so verification always has a source of truth even on a clean checkout. For
+each output CSV that exists in the output dir it also compares the on-disk file to the
+re-run and flags divergence as `STALE` (a warning: the file predates the current code or
+data, not a contradiction in the numbers). Full spec:
+[`specs/step8_verify/design.md`](specs/step8_verify/design.md).
+
+```bash
+# re-runs Steps 3-7 and reconciles
+python -m empirical_analysis.step8_verify.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4
+
+# fail the process if any check FAILs (for CI)
+python -m empirical_analysis.step8_verify.run --strict
+```
+
+Checks (each is one reconciliation row, `status` PASS / WARN / FAIL):
+
+| Category | What it asserts |
+|---|---|
+| population | firm rows 116,005; green 8,306; other 107,699; green stages 6,636/834/836; financed 47,714; INVESTED 50,815; grant-and-VC 3,960 |
+| trio_identity | `n_green + n_others == n_startups` on every table carrying the trio |
+| shares_sum | T4.14/T4.15 stage shares, T4.18/T4.23 relation shares, T4.28 per-country origin shares sum to 1; T4.29 `green_amount + other_amount == total_amount` and share in [0,1] |
+| median_in_iqr | `q25 <= median <= q75` on T4.10/T4.11/T4.13 |
+| low_n_flag | `(n_green < 30) == (low_n_flag == 1)` on every flagged table; headline/country tables carry the column |
+| source_totals | T4.15 == deals rows (116,505); T4.18 == links on INVESTED firms; T4.29 <= disclosed `deal_size`; T4.6 == population/green; T4.26 firm share recomputes |
+| double_counting | relations exceed firms (grain kept); INVESTED base is firm-grain, not relation-grain |
+| stale_files | each present output CSV matches the re-run within tolerance, else `STALE` |
+
+Output is `step8_reconciliation.csv` (one row per check: `check_id`, `category`,
+`description`, `expected`, `observed`, `status`, `detail`). The run prints a
+PASS/WARN/FAIL summary and every non-PASS line; `--strict` exits non-zero on any `FAIL`.
+Deferred (see spec §8): the end-to-end trace of ~10 firms (5.3) and the Stage 2+3 re-run
+of headline results (5.6, already carried by the R1 columns on the Step 3-7 tables).
 
 ## Acceptance anchors
 

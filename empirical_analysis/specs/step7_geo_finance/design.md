@@ -27,6 +27,9 @@ crosses geography with finance to answer three questions the earlier steps defer
   investors, green vs other — the Step 6 T4.23 origin question resolved per country.
 - **What kind of financing does each country raise? (T4.29)** Per country x
   `stage_group`, the green vs other split of disclosed deal capital.
+- **How much capital is recorded in each country? (T4.10 addition)** Per country,
+  the summed lifetime `total_raised` for green, other, and total — absolute USD
+  millions, not medians or shares.
 
 Step 7 also provides **block B**: a collapsed by-country comparison of every Step 5
 and Step 6 table, so any headline funding or investor statistic can be read country by
@@ -133,7 +136,26 @@ green share of capital.
 
 Sorted by `n_startups` descending.
 
-### 4.2 `T4_28_investor_origin_by_country.csv` — investor origin by country (T4.28)
+### 4.2 `T4_10_cumulative_total_raised_by_country.csv` — cumulative total raised (T4.10 addition)
+
+**Country grain**, one row per country. The absolute-capital counterpart to T4.26's
+funding shares and block B's median T4.10: summed lifetime `total_raised`, not a
+median and not a share.
+
+| Column | Meaning |
+|---|---|
+| `country` | HQ country |
+| `green_total_raised` | sum of recorded `total_raised`, green firms (USD m) |
+| `other_total_raised` | sum of recorded `total_raised`, other firms (USD m) |
+| `total_total_raised` | green + other (recorded amounts only) |
+| `coverage_total_raised` | share of the country's firms with a recorded `total_raised` |
+| `low_n_flag` | 1 if `n_green < 30` |
+| `n_green`, `n_others`, `n_startups` | firms in the country (full population) |
+
+Sorted by `n_startups` descending. Sums reconcile to T4.26 funding shares where
+`total_total_raised > 0`.
+
+### 4.3 `T4_28_investor_origin_by_country.csv` — investor origin by country (T4.28)
 
 **Relation grain over INVESTED, known-country only**, one row per country. Where each
 country's start-ups' investors come from, green vs other.
@@ -152,7 +174,7 @@ firm's `hq_country`; European cross-border = a different but European country;
 non-European = a known non-European country. European = any country appearing as an
 `hq_country`.
 
-### 4.3 `T4_29_country_funding_by_type.csv` — country funding by financing type (T4.29)
+### 4.4 `T4_29_country_funding_by_type.csv` — country funding by financing type (T4.29)
 
 **Country x `stage_group` grain**, from summed disclosed `deal_size`.
 
@@ -169,7 +191,7 @@ non-European = a known non-European country. European = any country appearing as
 
 Rows are ordered by country (n_startups descending) then `STAGE_GROUP_ORDER`.
 
-### 4.4 `F4_26_green_share_scatter.csv` — figure data for the T4.26 scatter
+### 4.5 `F4_26_green_share_scatter.csv` — figure data for the T4.26 scatter
 
 | Column | Meaning |
 |---|---|
@@ -180,7 +202,7 @@ Rows are ordered by country (n_startups descending) then `STAGE_GROUP_ORDER`.
 | `low_n_flag` | 1 if `n_green < 30` |
 | `n_green`, `n_others`, `n_startups` | firms in the country |
 
-### 4.5 Block B — collapsed by-country comparison (`*_by_country.csv`)
+### 4.6 Block B — collapsed by-country comparison (`*_by_country.csv`)
 
 For every Step 5 and Step 6 table, one file with **one row per country** carrying that
 table's **headline statistic** green vs other, plus a difference or ratio, the trio,
@@ -200,7 +222,6 @@ slice (§5), so nothing is redefined.
 | T4.15 | `T4_15_stage_composition_by_country.csv` | VC-stage share of deals (deal grain) |
 | T4.16 | `T4_16_median_deal_size_by_stage_by_country.csv` | median deal size over deals with a size (stages collapsed) |
 | T4.17 | `T4_17_financing_trajectories_by_country.csv` | median rounds per firm, share with >=2 rounds (financed) |
-| F4.4 | `F4_04_cumulative_financed_by_country.csv` | share financed and share VC-backed within 5 years of founding (age>=5, rule R4) |
 | T4.18/F4.5 | `T4_18_investor_type_distribution_by_country.csv` | share of INVESTED firms with >=1 independent-VC investor |
 | T4.19 | `T4_19_investor_flags_by_country.csv` | median distinct investors (INVESTED) |
 | T4.21 | `T4_21_public_private_by_country.csv` | share with lifetime public+private combination (INVESTED) |
@@ -239,6 +260,7 @@ matches the source table and is stated in the caption.
 
 The run prints these at the end. Step 7 is done when they pass.
 
+- [ ] T4.10 cumulative total_raised sums reconcile to T4.26 funding shares per country
 - [ ] T4.26 reports every country (no floor); the count of `low_n_flag` rows is
       printed, and an informational count at the former >=500 floor is shown
 - [ ] T4.26 `green_funding_share` uses recorded amounts only; `coverage_total_raised`
@@ -268,6 +290,7 @@ The run prints these at the end. Step 7 is done when they pass.
 ## 8. Out of scope
 
 - Plotted PDF figures — this step writes figure *data* only.
+- F4.4 cumulative financed curve — remains Europe-wide in Step 5 only (`F4_04_cumulative_financed.csv`); the multi-horizon access curve does not collapse to a single by-country headline.
 - T4.20 (green subsegment x investor type) and T4.24 (non-European by stage) — remain
   deferred (Step 6 §3); Step 7 does not add the vertical or stage x country cuts.
 - NUTS-2 regional grain (T4.27 stretch) — not attempted.

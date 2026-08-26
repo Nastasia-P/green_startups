@@ -21,6 +21,7 @@ from empirical_analysis.step6_investors import build as s6
 from empirical_analysis.step7_geo_finance.build import (
     build_all,
     build_country_funding_by_type,
+    build_cumulative_total_raised_by_country,
     build_green_share_firms_vs_capital,
     build_investor_origin_by_country,
     write_outputs,
@@ -153,6 +154,20 @@ def test_t426_firm_share_and_capital_measures():
     assert t426.loc["Germany", "ratio_tr"] > 1
 
 
+def test_t410_cumulative_total_raised_sums():
+    t410 = build_cumulative_total_raised_by_country(_firm_frame()).set_index("country")
+    # Germany: green 100+50=150, other 10, total 160 (USD m).
+    assert t410.loc["Germany", "green_total_raised"] == 150.0
+    assert t410.loc["Germany", "other_total_raised"] == 10.0
+    assert t410.loc["Germany", "total_total_raised"] == 160.0
+    assert t410.loc["Germany", "coverage_total_raised"] == 0.75
+    # Reconciles with T4.26 funding share.
+    t426 = build_green_share_firms_vs_capital(_firm_frame(), _deals()).set_index("country")
+    assert t426.loc["Germany", "green_funding_share_total_raised"] == round(
+        150 / 160, 4
+    )
+
+
 def test_t426_no_country_floor_and_low_n_flag():
     t426 = build_green_share_firms_vs_capital(_firm_frame(), _deals())
     # Every country appears, including one-firm Italy.
@@ -234,6 +249,7 @@ def test_by_country_headline_matches_step6_helper():
 def test_build_all_and_write(tmp_path):
     result = build_all(_firm_frame(), _deals(), _company_investors(), _investors())
     for key in ("T4_26_green_share_firms_vs_capital",
+                "T4_10_cumulative_total_raised_by_country",
                 "T4_28_investor_origin_by_country",
                 "T4_29_country_funding_by_type",
                 "F4_26_green_share_scatter"):
@@ -244,5 +260,6 @@ def test_build_all_and_write(tmp_path):
         result.tables[name] = df
     out = write_outputs(result, tmp_path)
     assert (out / "T4_26_green_share_firms_vs_capital.csv").exists()
-    assert (out / "T4_23_investor_origin_by_country.csv").exists()
+    assert (out / "T4_10_cumulative_total_raised_by_country.csv").exists()
+    assert (out / "T4_28_investor_origin_by_country.csv").exists()
     assert (tmp_path / "captions_step7.csv").exists()

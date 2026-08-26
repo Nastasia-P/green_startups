@@ -1,6 +1,6 @@
 """Step 7 block B: the collapsed by-country comparison of every Step 5/6 table.
 
-For each Step 5 (T4.9-T4.17, F4.4) and Step 6 (T4.18/19/21/22/23/25, F4.5) table this
+For each Step 5 (T4.9-T4.17) and Step 6 (T4.18/19/21/22/23/25, F4.5) table this
 produces one `*_by_country.csv` with one row per country carrying that table's
 headline statistic green vs other, the secondary dimension (cohort / stage / measure)
 collapsed. No statistic is redefined: every headline is computed with the same helpers
@@ -253,30 +253,6 @@ def _hl_t417(ctx, investors, european) -> dict:
     }
 
 
-def _hl_f404(ctx, investors, european, horizon: int = 5) -> dict:
-    firm_c = ctx["firm"]
-    age = _num(firm_c["age_years"])
-    fund_lag = _num(firm_c.get("first_funding_lag"))
-    vc_lag = _num(firm_c.get("first_vc_lag"))
-    green = (firm_c["green"] == 1)
-    eligible = age >= horizon
-    g_mask = eligible & green
-    o_mask = eligible & ~green
-    n_g, n_o = int(g_mask.sum()), int(o_mask.sum())
-    gf = int(((fund_lag <= horizon) & g_mask).sum()) / n_g if n_g else float("nan")
-    of = int(((fund_lag <= horizon) & o_mask).sum()) / n_o if n_o else float("nan")
-    gv = int(((vc_lag <= horizon) & g_mask).sum()) / n_g if n_g else float("nan")
-    ov = int(((vc_lag <= horizon) & o_mask).sum()) / n_o if n_o else float("nan")
-    return {
-        "horizon_years": horizon,
-        "green_share_financed": round(gf, 4), "other_share_financed": round(of, 4),
-        "diff_financed": _diff(gf, of),
-        "green_share_vc": round(gv, 4), "other_share_vc": round(ov, 4),
-        "diff_vc": _diff(gv, ov),
-        "n_green": n_g, "n_others": n_o, "n_startups": n_g + n_o,
-    }
-
-
 def _hl_t418(ctx, investors, european) -> dict:
     invested = s6._invested(ctx["firm"])
     g, o = s6._split(invested)
@@ -395,7 +371,6 @@ BY_COUNTRY_TABLES = [
     ("T4_15_stage_composition_by_country", _hl_t415),
     ("T4_16_median_deal_size_by_stage_by_country", _hl_t416),
     ("T4_17_financing_trajectories_by_country", _hl_t417),
-    ("F4_04_cumulative_financed_by_country", _hl_f404),
     ("T4_18_investor_type_distribution_by_country", _hl_t418),
     ("T4_19_investor_flags_by_country", _hl_t419),
     ("T4_21_public_private_by_country", _hl_t421),

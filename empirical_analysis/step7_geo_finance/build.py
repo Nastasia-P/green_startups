@@ -130,6 +130,58 @@ def build_green_share_firms_vs_capital(
 
 
 # --------------------------------------------------------------------------
+# T4.10 cumulative total_raised by country (absolute amounts, not shares)
+# --------------------------------------------------------------------------
+def build_cumulative_total_raised_by_country(
+    firm: pd.DataFrame, min_country_n: int | None = None
+) -> pd.DataFrame:
+    """Sum lifetime total_raised by country and group (USD m, recorded amounts only)."""
+    min_n = config.MIN_COUNTRY_N if min_country_n is None else min_country_n
+    cols = [
+        "country", "green_total_raised", "other_total_raised", "total_total_raised",
+        "coverage_total_raised", "low_n_flag",
+        "n_green", "n_others", "n_startups",
+    ]
+
+    work = pd.DataFrame(
+        {
+            "country": _clean_str(firm[config.HQ_COUNTRY_FIELD]),
+            "green": (firm["green"] == 1).astype(int),
+            "total_raised": _num(firm[config.TOTAL_RAISED_FIELD]),
+        }
+    ).dropna(subset=["country"])
+
+    rows = []
+    for country, sub in work.groupby("country"):
+        n_startups = len(sub)
+        n_green = int(sub["green"].sum())
+        n_others = n_startups - n_green
+        if n_startups < min_n:
+            continue
+        green = sub[sub["green"] == 1]
+        other = sub[sub["green"] == 0]
+        tr = sub["total_raised"]
+        tr_green = float(green["total_raised"].dropna().sum())
+        tr_other = float(other["total_raised"].dropna().sum())
+        rows.append(
+            {
+                "country": country,
+                "green_total_raised": round(tr_green, 2),
+                "other_total_raised": round(tr_other, 2),
+                "total_total_raised": round(tr_green + tr_other, 2),
+                "coverage_total_raised": round(float(tr.notna().mean()), 4),
+                "low_n_flag": int(n_green < config.LOW_N_FLAG),
+                "n_green": n_green,
+                "n_others": n_others,
+                "n_startups": n_startups,
+            }
+        )
+    return pd.DataFrame(rows, columns=cols).sort_values(
+        "n_startups", ascending=False
+    ).reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
 # T4.28 investor origin by country
 # --------------------------------------------------------------------------
 def build_investor_origin_by_country(
@@ -279,6 +331,9 @@ def build_all(
 
     t426 = build_green_share_firms_vs_capital(firm, deals)
     result.tables["T4_26_green_share_firms_vs_capital"] = t426
+    result.tables["T4_10_cumulative_total_raised_by_country"] = (
+        build_cumulative_total_raised_by_country(firm)
+    )
     result.tables["T4_28_investor_origin_by_country"] = build_investor_origin_by_country(
         firm, company_investors, investors)
     result.tables["T4_29_country_funding_by_type"] = build_country_funding_by_type(
@@ -291,6 +346,13 @@ def build_all(
         "ratio>1 means green attracts more capital than its firm count implies. A 2026 "
         "snapshot of recorded capital, not an investment-flow series. Every country is "
         "shown; rows with fewer than 30 green firms carry low_n_flag."
+    )
+    result.caption["T4_10_cumulative_total_raised_by_country"] = (
+        "Country grain: summed lifetime total_raised (USD millions, recorded amounts "
+        "only, rule N1) on the full country population. Complements the block-B T4.10 "
+        "median and T4.26 funding shares with absolute green / other / total capital. "
+        "Missing total_raised is unobserved, not zero. A 2026 snapshot, not a flow "
+        "series; coverage_total_raised is on every row."
     )
     result.caption["T4_28_investor_origin_by_country"] = (
         "Relation grain over the INVESTED subsample, known investor-country only "
@@ -361,5 +423,28 @@ def acceptance_report(firm: pd.DataFrame, result: Step7Result) -> list[str]:
         total = round(float(t429["total_amount"].sum()), 2)
         lines.append(f"T4.29: {len(t429)} country x stage rows; "
                      f"summed disclosed deal capital={total}")
+
+    t410 = result.tables.get("T4_10_cumulative_total_raised_by_country")
+    if t410 is not None and not t410.empty and not t426.empty:
+        merged = t426.merge(
+            t410[["country", "green_total_raised", "total_total_raised"]],
+            on="country",
+            how="inner",
+        )
+        merged["share_check"] = merged.apply(
+            lambda r: round(r["green_total_raised"] / r["total_total_raised"], 4)
+            if r["total_total_raised"] else float("nan"),
+            axis=1,
+        )
+        bad = merged[
+            merged["share_check"].notna()
+            & merged["green_funding_share_total_raised"].notna()
+            & (merged["share_check"] - merged["green_funding_share_total_raised"]).abs()
+            > 1e-3
+        ]
+        lines.append(
+            f"T4.10 cumulative total_raised: {len(t410)} countries; "
+            f"share reconcile with T4.26: {len(bad)} mismatches (expect 0)"
+        )
 
     return lines
