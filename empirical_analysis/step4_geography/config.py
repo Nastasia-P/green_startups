@@ -93,10 +93,15 @@ OUTPUT_DIR: Path = _resolve_output_dir()
 GREEN_LABEL = "Green start-ups"
 OTHER_LABEL = "Other European start-ups"
 
-# --- Reporting minimums (decision D4) --------------------------------------
-MIN_COUNTRY_N = 500          # a country needs this many start-ups to get a row
-MIN_COUNTRY_N_SENSITIVITY = 800   # printed as a sensitivity count in acceptance
-MIN_CITY_N = 100             # a city needs this many start-ups to get a row
+# --- Reporting minimums (decision D4, country floor dropped per user) -------
+# The country floor is removed: every country with at least one start-up gets a
+# row and thin green cells are marked with low_n_flag instead of being dropped.
+# MIN_COUNTRY_N stays as an explicit "include all" knob (set to 1) so the filter
+# can be reinstated by raising it. The old 500 gate is kept only as an
+# informational sensitivity count in the acceptance report.
+MIN_COUNTRY_N = 1            # report every country (no floor); raise to re-gate
+MIN_COUNTRY_N_SENSITIVITY = 500   # the former floor, printed as a sensitivity count
+MIN_CITY_N = 100             # cities keep their own floor (unchanged)
 LOW_N_FLAG = 30              # flag any reported cell with green_n below this
 
 # --- Concentration reporting ----------------------------------------------

@@ -64,11 +64,13 @@ no network. Regenerate it with `python -m empirical_analysis.step4_geography.fet
 - Every table reports its own **n** (country or city firm count) alongside any share.
 - **Country denominators use the full 116,005 population** (rule N9), never PitchBook's
   global universe. The EU-wide denominators in the location quotient use all 116,005
-  and all 8,306 green, including firms in countries that fall below the reporting
-  minimum — those firms stay in the denominator even though their country has no row.
-- **Minimums (decision D4):** a country needs **≥500** start-ups to get a row; a city
-  needs **≥100**. The default is 500; a sensitivity count at 800 is printed in the
-  acceptance report. Any cell with n < 30 is flagged.
+  and all 8,306 green; the reference is fixed at the EU level, so which countries are
+  shown does not move any country's LQ.
+- **Country floor dropped (per request):** the decision-D4 500-firm gate is removed.
+  `MIN_COUNTRY_N` is set to **1**, so **every country with at least one start-up gets a
+  row**; thin cells carry `low_n_flag` (green < 30) and are read as indicative rather
+  than dropped. The former 500 gate is printed only as a sensitivity count. Cities keep
+  the **≥100** floor (`MIN_CITY_N`).
 - **Robustness R1** (`green_signal_group`: Stage 1 vertical vs Stage 2+3 text) is
   applied to the location quotient in T4.6 as two extra columns.
 
@@ -84,7 +86,7 @@ OneDrive `...\09_Python_Empirical Analysis\chapter4_outputs` > `<repo>/data/outp
 
 ### 4.1 `T4_06_country_specialisation.csv` — country distribution and specialisation (T4.6)
 
-One row per country with ≥500 start-ups, ranked by `green_n` descending.
+One row per country (all countries, no floor), ranked by `green_n` descending.
 
 | Column | Formula / meaning |
 |---|---|
@@ -199,8 +201,9 @@ Re-fetching is optional and only needed to refresh the year.
 
 The run prints these at the end. Step 4 is done when they pass.
 
-- [ ] T4.6 lists every country with ≥500 start-ups (20 in the current data), ranked by
-      `green_n`, and the sum of `n_startups` over included countries is reported
+- [ ] T4.6 lists every country (all 46 in the current data; 20 at the former ≥500
+      floor, printed as a sensitivity), ranked by `green_n`, and the sum of `n_startups`
+      over countries equals the full 116,005
 - [ ] `lq` uses the fixed EU reference `8,306 / 116,005`; a country at the EU average
       reads `lq ≈ 1`
 - [ ] T4.7 joins Eurostat population; the Spearman(startups_per_million, green_intensity)

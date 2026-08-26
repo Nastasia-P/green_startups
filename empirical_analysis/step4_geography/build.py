@@ -296,9 +296,11 @@ def build_all(
     result.caption["T4_06_country_specialisation"] = (
         "Location quotient uses the fixed EU-wide reference "
         f"(green/population = {config.EU_GREEN_INTENSITY}); lq>1 means the country is "
-        "more green-specialised than Europe overall. Countries below the "
-        f"{config.MIN_COUNTRY_N}-firm minimum (decision D4) get no row but stay in the "
-        "EU denominators (rule N9)."
+        "more green-specialised than Europe overall. Every country with at least one "
+        "start-up is reported (no country floor); rows with fewer than "
+        f"{config.LOW_N_FLAG} green firms carry low_n_flag=1 and are read as "
+        "indicative. The EU reference is fixed at the full population (rule N9), so "
+        "the LQ of any country is unaffected by which others are shown."
     )
     result.caption["T4_07_per_capita_crosscheck"] = (
         "Per-capita cross-check against Eurostat demo_pjan population. Countries with "
@@ -336,7 +338,7 @@ def acceptance_report(result: Step4Result) -> list[str]:
     n_startups_sum = int(t46["n_startups"].sum())
     green_sum = int(t46["n_green"].sum())
     lines.append(
-        f"T4.6: {len(t46)} countries with n>={config.MIN_COUNTRY_N}; "
+        f"T4.6: {len(t46)} countries reported (no floor); "
         f"included n_startups={n_startups_sum} of {config.POP_TOTAL}, "
         f"green={green_sum} of {config.GREEN_TOTAL}"
     )
@@ -345,8 +347,8 @@ def acceptance_report(result: Step4Result) -> list[str]:
         lines.append(f"  top by n_green: {top['country']} "
                      f"(n_green={int(top['n_green'])}, lq={top['lq']})")
         n_sens = int((t46["n_startups"] >= config.MIN_COUNTRY_N_SENSITIVITY).sum())
-        lines.append(f"  sensitivity: {n_sens} countries would remain at n>="
-                     f"{config.MIN_COUNTRY_N_SENSITIVITY}")
+        lines.append(f"  sensitivity: {n_sens} countries at n>="
+                     f"{config.MIN_COUNTRY_N_SENSITIVITY} (the former floor)")
         flagged = int(t46["low_n_flag"].sum())
         if flagged:
             lines.append(f"  {flagged} country row(s) flagged green_n<{config.LOW_N_FLAG}")
@@ -373,7 +375,7 @@ def acceptance_report(result: Step4Result) -> list[str]:
                          f"diff={t48.loc[key, 'difference']}")
 
     ap2 = result.tables["AP2_city_ranking"]
-    lines.append(f"AP2: {len(ap2)} cities with n>={config.MIN_CITY_N}")
+    lines.append(f"AP2: {len(ap2)} cities with n>={config.MIN_CITY_N} (city floor kept)")
     if not ap2.empty:
         top = ap2.iloc[0]
         lines.append(f"  top by n_green: {top['city']} ({top['country']}, "

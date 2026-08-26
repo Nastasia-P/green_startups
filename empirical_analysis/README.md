@@ -18,7 +18,8 @@ step maps to the thesis output register.
 | 4 | `step4_geography` | geography tables (T4.6-T4.8, AP2, F4.2, F4.3) | done |
 | 5 | `step5_funding` | funding tables (T4.9-T4.17 incl. T4.12, F4.4) | done |
 | 6 | `step6_investors` | investor & grant tables (T4.18-T4.19, T4.21-T4.23, T4.25, F4.5) | done |
-| 7 | `step7` | Chapter 4 exhibits | planned (see ROADMAP) |
+| 7 | `step7_geo_finance` | geography x finance (T4.26, T4.28, T4.29, F-data) + by-country comparison of all Step 5/6 tables | done |
+| 8 | `step8_verify` | cross-table reconciliation | planned (see ROADMAP) |
 
 ## Prerequisites
 
@@ -183,8 +184,9 @@ count but Finland, Spain and Switzerland lead by specialisation). Descriptive on
 
 Reads the Step 2 firm table (`company_analysis.parquet`) plus a committed Eurostat
 population file (`data/sources/eurostat_population.csv`) for the per-capita
-cross-check. Country denominators use the full 116,005 population; a country needs
-≥500 start-ups to get a row and a city ≥100.
+cross-check. Country denominators use the full 116,005 population. The country floor
+was dropped (per request): every country with at least one start-up gets a row and
+thin cells carry `low_n_flag` (green < 30); cities still need ≥100 start-ups.
 
 ```bash
 # optional: refresh the Eurostat population file (needs network)
@@ -210,7 +212,7 @@ What to expect (CSV files in the output dir):
 
 | File | Contents |
 |---|---|
-| `T4_06_country_specialisation.csv` | per country (≥500 firms): green count, share of European green, green intensity, location quotient, plus Stage 1 / Stage 2+3 LQ variants |
+| `T4_06_country_specialisation.csv` | per country (all countries): green count, share of European green, green intensity, location quotient, plus Stage 1 / Stage 2+3 LQ variants; `low_n_flag` marks thin rows |
 | `T4_07_per_capita_crosscheck.csv` | same countries joined to Eurostat population: start-ups and green per million; unmatched countries (Russia, the post-2020 UK) kept with NA |
 | `T4_08_concentration.csv` | top-5 / top-10 country and top-5 city shares, green vs other, each on its own denominator |
 | `AP2_city_ranking.csv` | per city (≥100 firms): green count, share, intensity, modal country |
@@ -220,8 +222,10 @@ What to expect (CSV files in the output dir):
 
 The location quotient uses the fixed EU-wide reference (green / population); `lq > 1`
 means a country is more green-specialised than Europe overall. The run ends by printing
-an acceptance report; a correct run shows 20 countries at ≥500 firms and a
-Spearman(start-ups per million, green intensity) of about −0.63.
+an acceptance report; a correct run shows all 46 countries reported (20 at the former
+≥500 floor, printed as a sensitivity), the full 116,005 firms retained in the
+denominators, 21 rows flagged `low_n_flag`, and a Spearman(start-ups per million, green
+intensity) of about −0.63.
 
 ### Columns used and data coverage
 
@@ -235,8 +239,9 @@ Spearman(start-ups per million, green intensity) of about −0.63.
 Location fields are essentially complete, so the specialisation ranking is
 high-confidence. Only the **per-capita cross-check** carries a caveat, and it is a
 cross-check rather than a headline: two countries fail the Eurostat match and are shown
-with NA rather than dropped. The `MIN_COUNTRY_N = 500` / `MIN_CITY_N = 100` thresholds
-keep low-n geographies out of the ranked tables.
+with NA rather than dropped. The country floor is off (`MIN_COUNTRY_N = 1`), so every
+country appears and thin rows are marked with `low_n_flag` rather than dropped; cities
+keep their `MIN_CITY_N = 100` floor.
 
 ## Step 5 — Funding
 
@@ -399,6 +404,77 @@ tables are high-confidence** (types and flags are fully populated); **syndicatio
 counts are medium** and the **lead-presence share is low** because leads are rarely
 tagged; **investor origin is medium** and restricted to known-country relations, with
 coverage reported on every row.
+
+## Step 7 — Geography x finance
+
+Crosses geography with finance to answer three questions the earlier steps deferred:
+**does green punch above its weight in capital** (T4.26: each country's green share of
+firms vs its green share of capital), **where does the money come from country by
+country** (T4.28: domestic / European cross-border / non-European investor origin per
+country), and **what kind of financing does each country raise** (T4.29: green vs other
+disclosed deal capital by country x stage). It also emits **block B**: a collapsed
+by-country comparison of every Step 5 and Step 6 table — one row per country with that
+table's headline statistic green vs other, the secondary dimension (cohort/stage/
+measure) collapsed. Block B redefines nothing: it reuses the Step 5/6 builders on
+per-country slices, so a by-country value equals the Europe-wide builder run on that
+country. Descriptive only, and a 2026 snapshot of recorded capital, not an
+investment-flow series.
+
+There is **no country floor** (per request, consistent with the amended Step 4): every
+country with a start-up is reported and thin cells carry `low_n_flag` (fewer than 30
+green firms / relations / deals, per the table's grain).
+
+Reads the Step 2 firm table plus four Step 1 clean tables (`deals_clean`,
+`company_investors_clean`, `investors_clean`, `deal_investors_clean`). Full spec:
+[`specs/step7_geo_finance/design.md`](specs/step7_geo_finance/design.md).
+
+```bash
+# build from the local Step 2 + Step 1 outputs
+python -m empirical_analysis.step7_geo_finance.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4
+
+# on the target machine, the OneDrive paths resolve on their own
+python -m empirical_analysis.step7_geo_finance.run
+```
+
+Paths resolve automatically; override if needed:
+
+- firm table: `--firm-table` > `STEP7_FIRM_TABLE` > OneDrive `09_...\company_analysis.parquet` > `data/outputs/company_analysis.parquet`
+- clean tables: `--clean-dir` > `STEP2_CLEAN_DIR` > OneDrive `09_...\clean_tables` > `data/outputs/clean_tables` > `data/interim`
+- output dir: `--output-dir` > `STEP7_OUTPUT_DIR` > OneDrive `09_...\chapter4_outputs` > `data/outputs/chapter4`
+
+What to expect (CSV files in the output dir):
+
+| File | Contents |
+|---|---|
+| `T4_26_green_share_firms_vs_capital.csv` | per country: green share of firms vs green share of capital (both `total_raised` and disclosed `deal_size`, coverage shown), and the ratio |
+| `T4_28_investor_origin_by_country.csv` | per country: domestic / EU cross-border / non-European investor relation shares, green vs other (known-country only, coverage shown) |
+| `T4_29_country_funding_by_type.csv` | per country x stage: green / other / total disclosed deal capital and green amount share |
+| `F4_26_green_share_scatter.csv` | figure data: green firm share (x) vs green funding share (y) with the y = x reference |
+| `<table>_by_country.csv` (16 files) | block B: one row per country, headline statistic green vs other, for every Step 5/6 table |
+| `captions_step7.csv` | fixed captions that must travel with the tables |
+
+Every table ends with `n_green`, `n_others`, `n_startups` (the grain — firms, financed
+firms, INVESTED firms, relations or deals — is stated in each caption). The run prints
+an acceptance report; a correct run shows all 46 countries in T4.26 (20 at the former
+≥500 floor), origin shares summing to one within each group per country, and green
+capital-concentrated (ratio > 1) in the UK, Italy and the Netherlands among others.
+
+### Columns used and data coverage
+
+| Column(s) | Source | Used for | Coverage | Confidence |
+|---|---|---|---|---|
+| `hq_country`, `green` | `company_analysis` | per-country population and green firm share (T4.26) | 100% | High |
+| `total_raised` | `company_analysis` | green funding share (T4.26) | 27% overall, 5-45% per country | Medium — recorded amounts only; `coverage_total_raised` is on every row |
+| `deal_size` | `deals_clean` | funding share cross-check (T4.26), country x stage capital (T4.29) | ~59% of deals | Medium — recorded amounts only; `coverage_dealsize` reported |
+| `investor_country` (× relations) | `investors_clean` / `company_investors_clean` | investor origin by country (T4.28) | ~77% of investors | Medium — known-country only; coverage per country on the row |
+| Step 5/6 columns | as in Steps 5/6 | block B headline metrics | as in Steps 5/6 | inherits the source table's tier |
+
+Because the country floor is off, small countries appear with `low_n_flag = 1` and are
+read as indicative; the two capital measures in T4.26 answer the funding-share question
+two ways, and both carry their coverage so a low share is not confused with a low count.
 
 ## Acceptance anchors
 

@@ -1,7 +1,7 @@
 # Pipeline roadmap — from clean data to Chapter 4 exhibits
 
 This is the durable plan for aligning the pipeline with the Chapter 4 analysis. It
-records the seven steps, which thesis outputs each produces, the additions to the
+records the eight steps, which thesis outputs each produces, the additions to the
 output register, and the open decisions. Each step is a self-contained module with
 its own spec under `empirical_analysis/specs/<step>/design.md`.
 
@@ -19,7 +19,8 @@ Step 3  Firm characteristics    DONE   -> areas 1, 2, 3
 Step 4  Geography               DONE   -> area 4
 Step 5  Funding                 DONE   -> areas 5, 6, 7
 Step 6  Investors and grants    DONE   -> areas 8, 9
-Step 7  Verification            TODO   -> cross-table reconciliation
+Step 7  Geography x finance      DONE   -> T4.26/T4.28/T4.29 + by-country cross
+Step 8  Verification            TODO   -> cross-table reconciliation
 ```
 
 Steps 3-6 are independent of each other; all four read only `company_analysis.parquet`
@@ -64,10 +65,13 @@ Spec written: `empirical_analysis/specs/step4_geography/design.md`. Implemented:
 `python -m empirical_analysis.step4_geography.run`). Reads `company_analysis` plus a
 committed Eurostat population file (`data/sources/eurostat_population.csv`, refreshed
 with `python -m empirical_analysis.step4_geography.fetch_eurostat`). Country
-denominators use the 116,005 population (rule N9), minimum 500 firms per country and
-100 per city (decision D4); the location-quotient reference is fixed at the EU level.
-Verified on the full firm table: 20 countries at >=500 firms, Spearman(startups per
-million, green intensity) ~ -0.63 on the 18 population-matched countries (UK and Russia
+denominators use the 116,005 population (rule N9); the location-quotient reference is
+fixed at the EU level. **The country floor from decision D4 was dropped (per request):**
+`MIN_COUNTRY_N` is set to 1 so every country with a start-up gets a row and thin cells
+carry `low_n_flag` (green < 30); the former 500 gate is printed only as a sensitivity
+count. Cities keep the 100 floor (`MIN_CITY_N`). Verified on the full firm table: all
+46 countries reported (20 at the former >=500 floor, 21 low-n flagged), Spearman(startups
+per million, green intensity) ~ -0.63 on the population-matched countries (UK and Russia
 kept with NA).
 
 | Output | Register | Content |
@@ -136,17 +140,50 @@ impact investors (+8.9 pp), combine public and private capital more often (15.7%
 non-European relation share) — coherent with the Draghi framing.
 
 **Deferred (same posture as Step 5's R3, no new inputs blocked):** T4.20 (investor
-composition by green subsegment), T4.24 (non-European participation by stage), T4.26
-(green share of firms vs green share of capital by country — the geography x finance
-bridge, decision D6), and F4.6 main-text figure selection (decision D7). The debt
-lender-type breakdown remains blocked on a Step 1 amendment to read
-`DealDebtLenderRelation.csv` (see open items).
+composition by green subsegment), T4.24 (non-European participation by stage), and F4.6
+main-text figure selection (decision D7). T4.26 (green share of firms vs green share of
+capital by country — the geography x finance bridge, decision D6) is now **built in
+Step 7** and no longer deferred. The debt lender-type breakdown remains blocked on a
+Step 1 amendment to read `DealDebtLenderRelation.csv` (see open items).
 
-## Step 7 — Verification
+## Step 7 — Geography x finance — DONE
 
-Module `step7_verify`. Reconciles firm counts across every output (population totals,
+Module `step7_geo_finance`, spec `specs/step7_geo_finance/design.md` (run with
+`python -m empirical_analysis.step7_geo_finance.run`). Crosses geography with finance.
+Reads `company_analysis` plus four Step 1 clean tables (`deals_clean`,
+`company_investors_clean`, `investors_clean`, `deal_investors_clean`). **No country
+floor** (consistent with the amended Step 4): every country with a start-up is
+reported and thin cells carry `low_n_flag`.
+
+Block A — three purpose-built country-grain outputs:
+
+| Output | Register | Content |
+|---|---|---|
+| `T4_26_green_share_firms_vs_capital.csv` | T4.26 | per country: green firm share vs green funding share (both `total_raised` and disclosed `deal_size`, coverage shown) and the ratio |
+| `T4_28_investor_origin_by_country.csv` | T4.28 (new) | per country: domestic / EU cross-border / non-European investor relation shares, green vs other (known-country only) |
+| `T4_29_country_funding_by_type.csv` | T4.29 (new) | per country x stage: green / other / total disclosed deal capital, green amount share |
+| `F4_26_green_share_scatter.csv` | F-data | figure data for the T4.26 scatter (green firm share vs green funding share, y = x reference) |
+
+Block B — a collapsed by-country comparison of every Step 5 and Step 6 table: for each
+(T4.9-T4.17, F4.4, T4.18/19/21/22/23/25) a `<table>_by_country.csv` with one row per
+country carrying that table's headline statistic green vs other, the secondary
+dimension (cohort/stage/measure) collapsed. Block B reuses the Step 5/6 builders on
+per-country slices, so a by-country value equals the Europe-wide builder run on that
+country; Steps 5/6 are unchanged.
+
+**Both capital measures** are reported per user decision: `total_raised` (firm-level,
+27% overall / 5-45% per-country coverage) and summed disclosed `deal_size` (~59%), each
+with its coverage on the row, so a low funding share is never confused with low
+coverage. Verified on the local build: 46 countries in T4.26 (20 at the former >=500
+floor, 21 low-n flagged); origin shares sum to 1 within each group per country; green is
+capital-concentrated (ratio_tr > 1) in the UK (0.087 firms -> 0.132 capital), Italy and
+the Netherlands, among others.
+
+## Step 8 — Verification
+
+Module `step8_verify`. Reconciles firm counts across every output (population totals,
 financed subsample, green totals by stage) so no two tables contradict each other.
-Produces `step7_reconciliation.csv`. No new analytical numbers (spec Phase 5).
+Produces `step8_reconciliation.csv`. No new analytical numbers (spec Phase 5).
 
 ## Additions to the output register
 
@@ -162,6 +199,9 @@ the reporting steps.
 | Last financing size, firm-level typical deal size | Step 5 | `last_deal_size`, `median_deal_size` already in `company_analysis` |
 | Dedicated median grant amount | Step 5 (T4.16 Grant row + a standalone line) | grant deal sizes from `deals_clean` where stage_group == Grant |
 | Debt lender-type breakdown | Step 6, **needs a Step 1 amendment** | requires reading `DealDebtLenderRelation.csv` (see open items) |
+| Investor origin by country (T4.28) | Step 7 | per-country resolution of the T4.23 origin split |
+| Country funding by financing type (T4.29) | Step 7 | per country x stage green/other disclosed deal capital |
+| By-country comparison of all Step 5/6 tables | Step 7 (block B) | one collapsed `<table>_by_country.csv` per Step 5/6 table |
 
 ## Open items to resolve before Steps 5-6
 
