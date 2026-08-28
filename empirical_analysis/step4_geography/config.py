@@ -123,7 +123,10 @@ SPEARMAN_REFERENCE = -0.67
 
 # --- Eurostat fetch (fetch_eurostat.py) ------------------------------------
 EUROSTAT_DATASET = "demo_pjan"          # population on 1 January
-EUROSTAT_YEARS = (2024, 2023, 2022)     # try most recent first, fall back
+# Fetched most-recent-first and backfilled per country: candidate/ex-member states
+# (AL, UA, XK, UK) only appear in older vintages, so we keep each country's latest
+# available year rather than a single wholesale year.
+EUROSTAT_YEARS = (2024, 2023, 2022, 2021, 2020)
 EUROSTAT_BASE_URL = (
     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
 )
@@ -157,6 +160,7 @@ COUNTRY_TO_EUROSTAT = {
     "Luxembourg": "LU",
     "Malta": "MT",
     "Moldova": "MD",
+    "Monaco": "MC",
     "Montenegro": "ME",
     "Netherlands": "NL",
     "North Macedonia": "MK",
@@ -172,8 +176,8 @@ COUNTRY_TO_EUROSTAT = {
     "Switzerland": "CH",
     "Ukraine": "UA",
     "United Kingdom": "UK",
-    # No Eurostat demo_pjan entry (kept with NA population):
-    #   Andorra, Belarus, Gibraltar, Monaco, Russia, San Marino
+    # No Eurostat demo_pjan entry in any recent vintage (kept with NA population):
+    #   Andorra, Belarus, Bosnia and Herzegovina, Gibraltar, Russia, San Marino
 }
 
 # --- Engineering -----------------------------------------------------------

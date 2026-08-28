@@ -9,6 +9,7 @@ LQ of the countries that remain. Every reported row carries its own firm count.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,6 +33,36 @@ def _clean_str(series: pd.Series) -> pd.Series:
     """Trimmed string column; blanks become NA."""
     s = series.astype("string").str.strip()
     return s.mask(s == "")
+
+
+def _city_key(name: str) -> str:
+    """Accent- and case-insensitive key so 'Zurich' and 'Zürich' collapse to one."""
+    decomposed = unicodedata.normalize("NFKD", name)
+    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return " ".join(stripped.casefold().split())
+
+
+def _canonical_city(city: pd.Series) -> pd.Series:
+    """Map accent/case variants of a city name to a single canonical spelling.
+
+    PitchBook stores the same city under several spellings (Zurich / Zürich,
+    Asnieres-sur-Seine / Asnières-sur-Seine). Grouping on the raw string splits one
+    city across rows. We fold each name to an accent-insensitive, case-insensitive
+    key and relabel every variant with the most frequent original spelling for that
+    key (ties broken alphabetically for determinism).
+    """
+    present = city.dropna()
+    if present.empty:
+        return city
+    df = pd.DataFrame({"orig": present})
+    df["key"] = df["orig"].map(_city_key)
+    counts = (
+        df.groupby(["key", "orig"]).size().reset_index(name="c")
+        .sort_values(["key", "c", "orig"], ascending=[True, False, True])
+    )
+    canon = counts.drop_duplicates("key").set_index("key")["orig"]
+    keys = city.map(lambda x: _city_key(x) if isinstance(x, str) else pd.NA)
+    return keys.map(canon).astype("string")
 
 
 def _eu_green_intensity(firm: pd.DataFrame) -> float:
@@ -177,7 +208,7 @@ def _hhi(counts: pd.Series) -> float:
 
 def build_concentration(firm: pd.DataFrame) -> pd.DataFrame:
     country = _clean_str(firm["hq_country"])
-    city = _clean_str(firm["hq_city"])
+    city = _canonical_city(_clean_str(firm["hq_city"]))
     green = (firm["green"] == 1)
 
     g_country = country[green].value_counts()
@@ -211,7 +242,7 @@ def build_city_ranking(
 ) -> pd.DataFrame:
     min_n = config.MIN_CITY_N if min_city_n is None else min_city_n
 
-    city = _clean_str(firm["hq_city"])
+    city = _canonical_city(_clean_str(firm["hq_city"]))
     country = _clean_str(firm["hq_country"])
     green = (firm["green"] == 1)
     n_green_total = int(green.sum())
@@ -303,14 +334,23 @@ def build_all(
         "the LQ of any country is unaffected by which others are shown."
     )
     result.caption["T4_07_per_capita_crosscheck"] = (
-        "Per-capita cross-check against Eurostat demo_pjan population. Countries with "
-        "no Eurostat match (e.g. Russia; the UK after 2020) keep NA population and are "
-        "retained. PitchBook coverage varies by country, so read a low intensity "
-        "against start-ups per capita before calling it low green specialisation."
+        "Per-capita cross-check against Eurostat demo_pjan population, taken as each "
+        "country's most recent available vintage (candidate/ex-member states such as "
+        "Albania, Ukraine, Kosovo and the UK only appear in older years). The six "
+        "countries Eurostat does not publish (Russia, Belarus, Bosnia and Herzegovina, "
+        "Andorra, San Marino, Gibraltar) keep NA population and are retained. PitchBook "
+        "coverage varies by country, so read a low intensity against start-ups per "
+        "capita before calling it low green specialisation."
     )
     result.caption["T4_08_concentration"] = (
         "Shares use each group's own total as the denominator, so green and other "
         "concentration are directly comparable."
+    )
+    result.caption["AP2_city_ranking"] = (
+        "City names are folded across accent and case variants (Zürich = Zurich) and "
+        "shown under their most frequent spelling, so one city is not split across "
+        "rows. Cities keep the MIN_CITY_N floor; the modal country is reported when a "
+        "city name occurs in more than one country."
     )
     return result
 

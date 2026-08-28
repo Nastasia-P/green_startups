@@ -234,12 +234,13 @@ intensity) of about −0.63.
 | `hq_country` | country counts, intensity, location quotient (T4.6-T4.8, F4.2, F4.3) | 100% / 100% | High |
 | `hq_city` | city ranking (AP2), top-5 city concentration (T4.8) | 98.5% / 99.4% | High |
 | `green`, `green_signal_group` | green counts/intensity; Stage 1 vs Stage 2+3 LQ variants | 100% / 100% | High |
-| `eurostat_population.csv` (external) | per-capita cross-check (T4.7) | matched for all but Russia and post-2020 UK (kept as NA) | Medium — external join; a few countries unmatched |
+| `eurostat_population.csv` (external) | per-capita cross-check (T4.7) | matched for 40/46 countries (each country's most recent Eurostat vintage); Russia, Belarus, Bosnia, Andorra, San Marino, Gibraltar kept as NA | Medium — external join; six countries Eurostat does not publish stay unmatched |
 
 Location fields are essentially complete, so the specialisation ranking is
 high-confidence. Only the **per-capita cross-check** carries a caveat, and it is a
-cross-check rather than a headline: two countries fail the Eurostat match and are shown
-with NA rather than dropped. The country floor is off (`MIN_COUNTRY_N = 1`), so every
+cross-check rather than a headline: the six countries Eurostat does not publish
+(Russia, Belarus, Bosnia, Andorra, San Marino, Gibraltar) are shown with NA rather than
+dropped. The country floor is off (`MIN_COUNTRY_N = 1`), so every
 country appears and thin rows are marked with `low_n_flag` rather than dropped; cities
 keep their `MIN_CITY_N = 100` floor.
 

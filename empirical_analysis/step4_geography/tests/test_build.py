@@ -138,6 +138,28 @@ def test_city_ranking_minimum_and_modal_country():
     assert ap2i.loc["Berlin", "country"] == "Germany"
 
 
+def test_city_ranking_folds_accent_and_case_variants():
+    # Zürich / Zurich / zurich are one city; the modal spelling ("Zurich", 2x) wins.
+    firm = pd.DataFrame(
+        [
+            {"company_id": "Z1", "green": 1, "green_signal_group": "Stage 1",
+             "hq_country": "Switzerland", "hq_city": "Zürich"},
+            {"company_id": "Z2", "green": 0, "green_signal_group": "none",
+             "hq_country": "Switzerland", "hq_city": "Zurich"},
+            {"company_id": "Z3", "green": 0, "green_signal_group": "none",
+             "hq_country": "Switzerland", "hq_city": "zurich"},
+        ]
+    )
+    ap2 = build_city_ranking(firm, min_city_n=TEST_MIN_CITY_N)
+    # All three collapse to a single row rather than three separate cities.
+    assert len(ap2) == 1
+    row = ap2.iloc[0]
+    assert row["city"] == "Zurich"        # modal original spelling
+    assert row["n_startups"] == 3
+    assert row["n_green"] == 1
+    assert row["country"] == "Switzerland"
+
+
 def test_build_all_and_write(tmp_path):
     result = build_all(
         _firm_frame(), _population_frame(),

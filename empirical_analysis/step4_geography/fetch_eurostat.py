@@ -69,8 +69,15 @@ def _parse_jsonstat(payload: dict, year: int) -> pd.DataFrame:
 
 
 def fetch(years: tuple[int, ...] | None = None) -> pd.DataFrame:
-    """Fetch the most recent requested year that returns broad country coverage."""
+    """Fetch demo_pjan across years and keep each country's most recent value.
+
+    A single wholesale year misses candidate/ex-member states (Albania, Ukraine,
+    Kosovo, the UK), which only appear in older vintages. Fetching most-recent-first
+    and backfilling per geo maximises country coverage while recording, on each row,
+    the year the figure actually comes from.
+    """
     years = years or config.EUROSTAT_YEARS
+    frames: list[pd.DataFrame] = []
     last_err: Exception | None = None
     for year in years:
         url = _build_url(config.EUROSTAT_DATASET, year)
@@ -81,13 +88,25 @@ def fetch(years: tuple[int, ...] | None = None) -> pd.DataFrame:
             last_err = exc
             print(f"[fetch_eurostat] {year}: {exc}")
             continue
-        if len(df) >= 25:  # broad coverage: EU27-ish
-            print(f"[fetch_eurostat] {year}: {len(df)} geographies")
-            return df
-        print(f"[fetch_eurostat] {year}: only {len(df)} geographies, trying older")
-    if last_err:
-        raise last_err
-    raise RuntimeError("No Eurostat year returned broad coverage.")
+        print(f"[fetch_eurostat] {year}: {len(df)} geographies")
+        frames.append(df)
+
+    if not frames:
+        if last_err:
+            raise last_err
+        raise RuntimeError("No Eurostat year returned any data.")
+
+    # Years are requested newest-first; keep the first (newest) row per geo_code.
+    merged = pd.concat(frames, ignore_index=True)
+    merged = (
+        merged.drop_duplicates(subset="geo_code", keep="first")
+        .sort_values("geo_code")
+        .reset_index(drop=True)
+    )
+    year_span = sorted(merged["year"].unique())
+    print(f"[fetch_eurostat] merged {len(merged)} geographies "
+          f"(years used: {year_span})")
+    return merged
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

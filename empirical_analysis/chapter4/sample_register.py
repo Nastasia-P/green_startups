@@ -246,10 +246,12 @@ def build_sample_register(
     ))
 
     # --- 4.2 Geography (Step 4) --------------------------------------------
+    # Country floor dropped (per request): every country with a start-up is reported
+    # and thin green cells carry low_n_flag instead of being excluded.
     if "hq_country" in firm.columns:
-        cc = firm["hq_country"].value_counts()
-        geo_firms = int(cc[cc >= 500].sum()) if len(cc) else 0
-        n_countries = int((cc >= 500).sum())
+        cc = _present(firm["hq_country"])
+        geo_firms = int(cc.sum())
+        n_countries = int(firm.loc[cc, "hq_country"].nunique())
     else:
         geo_firms = None
         n_countries = None
@@ -258,20 +260,24 @@ def build_sample_register(
         statistic="country_lq", population="Full",
         n_total=geo_firms, n_green=None, n_other=None,
         sample_definition=(
-            f"Start-ups in countries with >=500 firms ({n_countries} countries)"
+            f"Every country with >=1 start-up ({n_countries} countries, no floor); "
+            "thin green cells carry low_n_flag"
             if n_countries is not None else
-            "Start-ups in countries with >=500 firms"
+            "Every country with >=1 start-up (no floor); thin cells carry low_n_flag"
         ),
-        rationale="Country denominators use the 116,005 population, not PitchBook global universe.",
-        rule_refs="N9,D4", step="4", status="planned",
+        rationale="Country floor removed per request; denominators use the 116,005 "
+                  "population, not the PitchBook global universe.",
+        rule_refs="N9,D4", step="4", status="built",
     ))
     rows.append(_row(
         section="4.2", output_id="T4.7", output_file="T4_07_per_capita_crosscheck.csv",
         statistic="startups_per_million", population="Full",
         n_total=geo_firms, n_green=None, n_other=None,
-        sample_definition="Same country set as T4.6 + Eurostat populations",
-        rationale="Tests whether uneven PitchBook coverage drives LQ rankings.",
-        rule_refs="N9", step="4", status="planned",
+        sample_definition="Same country set as T4.6 (all countries); Eurostat "
+                          "population matched where published, remainder shown as NA",
+        rationale="Tests whether uneven PitchBook coverage drives LQ rankings; six "
+                  "countries Eurostat does not publish are retained with NA population.",
+        rule_refs="N9", step="4", status="built",
     ))
 
     # --- 4.3 Funding access (Step 5) ---------------------------------------

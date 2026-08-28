@@ -154,13 +154,13 @@ This inverts the raw-count ranking: Italy is second on absolute start-up count b
 
 ### T4.7 · Per-capita cross-check ★ **REQUIRED**
 **Purpose:** Not a nicety. Tests whether the T4.6 denominator is contaminated by uneven PitchBook coverage.
-**Grain:** one row per country · **External input:** Eurostat population
+**Grain:** one row per country (all 46; **40 matched** to Eurostat, six unmatched shown with NA) · **External input:** Eurostat `demo_pjan`, each country's most recent published vintage
 
 | Column | Formula |
 |---|---|
 | Country · Population (m) · Start-ups per million · Green per million · Green intensity (from T4.6) · LQ (from T4.6) |
 
-**Why required.** Start-up density spans **29.5 per million (Poland) to 1,921 (Norway)**, a ~65× range no economic story explains. Spearman(density, green intensity) = **−0.67** across 19 countries: densely covered countries show systematically *lower* green shares, consistent with dense coverage sweeping in small firms never tagged green and diluting the denominator.
+**Why required.** Among the 19 large countries (former ≥500 floor) start-up density spans **29.5 per million (Poland) to 1,904 (Norway)**, a ~65× range no economic story explains, and Spearman(density, green intensity) = **−0.67**: densely covered countries show systematically *lower* green shares, consistent with dense coverage sweeping in small firms never tagged green and diluting the denominator. Across all **40 matched countries** the correlation weakens to **−0.25** (n=40) as thin candidate countries with low density and volatile green intensity enter — so the coverage-dilution signal is strongest exactly where coverage is deepest. Six countries Eurostat does not publish (Russia, Belarus, Bosnia and Herzegovina, Andorra, San Marino, Gibraltar) are retained with NA population.
 
 **Consequence:** the bottom of T4.6 (Norway 0.35, Italy 0.46, Sweden 0.54) cannot be read as low green specialisation without this table. Where LQ and green-per-million disagree, say so explicitly.
 

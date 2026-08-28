@@ -1,4 +1,5 @@
 geo_code,country_eurostat,year,population
+AL,Albania,2023,2761785
 AM,Armenia,2024,2991201
 AT,Austria,2024,9158750
 AZ,Azerbaijan,2024,10180770
@@ -13,10 +14,14 @@ DK,Denmark,2024,5961249
 EA20,Euro area – 20 countries (2023-2025),2024,350174019
 EA21,Euro area – 21 countries (from 2026),2024,357367799
 EE,Estonia,2024,1374687
+EEA30_2007,"European Economic Area (EU27 - 2007-2013 and IS, LI, NO)",2020,515878092
+EEA31,"European Economic Area (EU28 - 2013-2020 and IS, LI, NO)",2020,519826027
 EFTA,European Free Trade Association,2024,14936057
 EL,Greece,2024,10375764
 ES,Spain,2024,48619695
+EU27_2007,European Union - 27 countries (2007-2013),2020,510122055
 EU27_2020,European Union - 27 countries (from 2020),2024,449306184
+EU28,European Union - 28 countries (2013-2020),2020,514055566
 FI,Finland,2024,5603851
 FR,France,2024,68669303
 GE,Georgia,2024,3694608
@@ -44,3 +49,6 @@ SE,Sweden,2024,10551707
 SI,Slovenia,2024,2123949
 SK,Slovakia,2024,5424687
 TR,Türkiye,2024,85372377
+UA,Ukraine,2022,40997698
+UK,United Kingdom,2020,67025542
+XK,Kosovo*,2022,1773971
