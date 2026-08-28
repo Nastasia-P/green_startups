@@ -1,6 +1,6 @@
 """Input access for Step 4.
 
-Loads the Step 2 firm table and the committed Eurostat population file. No
+Loads the Step 2 firm table and the committed World Bank population file. No
 transformation happens here.
 """
 
@@ -46,17 +46,15 @@ def load_firm_table(firm_table_path: Path | None = None) -> pd.DataFrame:
 
 
 def load_population(population_path: Path | None = None) -> pd.DataFrame:
-    """Load the committed Eurostat population file; empty frame if absent.
+    """Load the committed World Bank population file; empty frame if absent.
 
-    Columns: geo_code, country_eurostat, year, population.
+    Columns: iso2, country, year, population.
     """
     path = Path(population_path or config.POPULATION_FILE)
     if not path.exists():
         log(f"[step4] load population: {path} MISSING -> empty "
             "(T4.7 population columns will be NA)")
-        return pd.DataFrame(
-            columns=["geo_code", "country_eurostat", "year", "population"]
-        )
+        return pd.DataFrame(columns=["iso2", "country", "year", "population"])
     df = pd.read_csv(path)
     log(f"[step4] load population: {path} rows={len(df)}")
     return df

@@ -61,9 +61,9 @@ def _resolve_clean_dir() -> Path:
 
 CLEAN_DIR: Path = _resolve_clean_dir()
 
-# --- Eurostat population (Step 4 T4.7 re-run input) ------------------------
+# --- World Bank population (Step 4 T4.7 re-run input) ----------------------
 _POPULATION_CANDIDATES_ANY = [
-    str(REPO_ROOT / "data" / "sources" / "eurostat_population.csv"),
+    str(REPO_ROOT / "data" / "sources" / "worldbank_population.csv"),
 ]
 
 
@@ -76,7 +76,7 @@ def _resolve_population() -> Path:
                 return path
         except OSError:
             continue
-    return REPO_ROOT / "data" / "sources" / "eurostat_population.csv"
+    return REPO_ROOT / "data" / "sources" / "worldbank_population.csv"
 
 
 POPULATION_FILE: Path = _resolve_population()

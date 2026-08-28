@@ -52,7 +52,7 @@ which R1 columns on the Step 3-7 tables already carry).
 | `investors_clean.parquet` (Step 1) | 1 per investor | re-run input (T4.18/T4.23/T4.28) |
 | `deal_investors_clean.parquet` (Step 1) | 1 per deal x investor | re-run input (T4.25) |
 | `industries_clean.parquet`, `verticals_clean.parquet` (Step 1) | relation | re-run input (Step 3) |
-| `eurostat_population.csv` | 1 per geo | re-run input (Step 4 T4.7); avoids false STALE on T4.07 |
+| `worldbank_population.csv` | 1 per country | re-run input (Step 4 T4.7); avoids false STALE on T4.07 |
 | output CSVs in the output dir | — | the stale-file comparison |
 
 Path resolution copies Step 7; `--firm-table` overrides and accepts either the Parquet

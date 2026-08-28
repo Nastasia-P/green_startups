@@ -154,13 +154,13 @@ This inverts the raw-count ranking: Italy is second on absolute start-up count b
 
 ### T4.7 · Per-capita cross-check ★ **REQUIRED**
 **Purpose:** Not a nicety. Tests whether the T4.6 denominator is contaminated by uneven PitchBook coverage.
-**Grain:** one row per country (all 46; **40 matched** to Eurostat, six unmatched shown with NA) · **External input:** Eurostat `demo_pjan`, each country's most recent published vintage
+**Grain:** one row per country (**all 46 matched**, no NA) · **External input:** World Bank `SP.POP.TOTL`, single latest vintage (one source, one reference year for every country)
 
 | Column | Formula |
 |---|---|
 | Country · Population (m) · Start-ups per million · Green per million · Green intensity (from T4.6) · LQ (from T4.6) |
 
-**Why required.** Among the 19 large countries (former ≥500 floor) start-up density spans **29.5 per million (Poland) to 1,904 (Norway)**, a ~65× range no economic story explains, and Spearman(density, green intensity) = **−0.67**: densely covered countries show systematically *lower* green shares, consistent with dense coverage sweeping in small firms never tagged green and diluting the denominator. Across all **40 matched countries** the correlation weakens to **−0.25** (n=40) as thin candidate countries with low density and volatile green intensity enter — so the coverage-dilution signal is strongest exactly where coverage is deepest. Six countries Eurostat does not publish (Russia, Belarus, Bosnia and Herzegovina, Andorra, San Marino, Gibraltar) are retained with NA population.
+**Why required.** Among the 20 large countries (former ≥500 floor) start-up density spans a ~65× range no economic story explains (Poland lowest, Norway ~1,880 per million), and Spearman(density, green intensity) = **−0.53**: densely covered countries show systematically *lower* green shares, consistent with dense coverage sweeping in small firms never tagged green and diluting the denominator. Across all **46 countries** the correlation is **−0.14** (n=46) — the coverage-dilution signal is strongest among the well-covered large countries and washes out once thin small countries enter. World Bank covers every country (including the UK, Russia, Gibraltar and the micro-states), so no country is dropped or shown with NA.
 
 **Consequence:** the bottom of T4.6 (Norway 0.35, Italy 0.46, Sweden 0.54) cannot be read as low green specialisation without this table. Where LQ and green-per-million disagree, say so explicitly.
 
@@ -355,7 +355,7 @@ Broadly follows spec §IX, with two deliberate deviations noted below.
 |---|---|---|
 | 1 | T4.0 | Phase 1 |
 | 2 | T4.1, T4.2, F4.1 | Phase 1 |
-| 3 | T4.6, T4.7, F4.2, F4.3 | Phase 1 + Eurostat |
+| 3 | T4.6, T4.7, F4.2, F4.3 | Phase 1 + World Bank population |
 | 4 | T4.9 | Phase 0 deals |
 | 5 | T4.10, T4.11, **T4.12** | Phase 0 deals |
 | 6 | T4.13, T4.14, F4.4 | Phase 0 deals |

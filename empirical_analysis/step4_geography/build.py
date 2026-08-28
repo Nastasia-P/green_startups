@@ -156,13 +156,13 @@ def build_per_capita(
     out = t46[
         ["country", "n_startups", "n_green", "n_others", "green_intensity", "lq"]
     ].copy()
-    out["geo_code"] = out["country"].map(config.COUNTRY_TO_EUROSTAT)
+    out["iso2"] = out["country"].map(config.COUNTRY_TO_ISO2)
 
     if population is not None and not population.empty:
-        pop = population[["geo_code", "population"]].copy()
-        pop["geo_code"] = pop["geo_code"].astype("string")
-        out["geo_code"] = out["geo_code"].astype("string")
-        out = out.merge(pop, on="geo_code", how="left")
+        pop = population[["iso2", "population"]].copy()
+        pop["iso2"] = pop["iso2"].astype("string")
+        out["iso2"] = out["iso2"].astype("string")
+        out = out.merge(pop, on="iso2", how="left")
     else:
         out["population"] = pd.NA
 
@@ -172,7 +172,7 @@ def build_per_capita(
 
     out = out[cols].sort_values("n_startups", ascending=False).reset_index(drop=True)
     matched = int(out["population_m"].notna().sum())
-    log(f"[step4] T4.7: {matched}/{len(out)} countries matched to Eurostat")
+    log(f"[step4] T4.7: {matched}/{len(out)} countries matched to World Bank")
     return out
 
 
@@ -334,13 +334,10 @@ def build_all(
         "the LQ of any country is unaffected by which others are shown."
     )
     result.caption["T4_07_per_capita_crosscheck"] = (
-        "Per-capita cross-check against Eurostat demo_pjan population, taken as each "
-        "country's most recent available vintage (candidate/ex-member states such as "
-        "Albania, Ukraine, Kosovo and the UK only appear in older years). The six "
-        "countries Eurostat does not publish (Russia, Belarus, Bosnia and Herzegovina, "
-        "Andorra, San Marino, Gibraltar) keep NA population and are retained. PitchBook "
-        "coverage varies by country, so read a low intensity against start-ups per "
-        "capita before calling it low green specialisation."
+        "Per-capita cross-check against World Bank total population (SP.POP.TOTL), a "
+        "single latest vintage covering all 46 countries from one source and one "
+        "reference year. PitchBook coverage varies by country, so read a low intensity "
+        "against start-ups per capita before calling it low green specialisation."
     )
     result.caption["T4_08_concentration"] = (
         "Shares use each group's own total as the denominator, so green and other "
@@ -398,7 +395,7 @@ def acceptance_report(result: Step4Result) -> list[str]:
     rho = result.diagnostics.get("spearman_per_capita")
     n_rho = int(result.diagnostics.get("spearman_n", 0))
     lines.append(
-        f"T4.7: {matched}/{len(t47)} countries matched to Eurostat population; "
+        f"T4.7: {matched}/{len(t47)} countries matched to World Bank population; "
         f"Spearman(startups_per_million, green_intensity)={rho} on n={n_rho} "
         f"(reference ~ {config.SPEARMAN_REFERENCE})"
     )

@@ -63,23 +63,24 @@ is needed.
 Spec written: `empirical_analysis/specs/step4_geography/design.md`. Implemented: module
 `empirical_analysis/step4_geography/` (run with
 `python -m empirical_analysis.step4_geography.run`). Reads `company_analysis` plus a
-committed Eurostat population file (`data/sources/eurostat_population.csv`, refreshed
-with `python -m empirical_analysis.step4_geography.fetch_eurostat`). Country
+committed World Bank population file (`data/sources/worldbank_population.csv`, refreshed
+with `python -m empirical_analysis.step4_geography.fetch_worldbank`). Country
 denominators use the 116,005 population (rule N9); the location-quotient reference is
 fixed at the EU level. **The country floor from decision D4 was dropped (per request):**
 `MIN_COUNTRY_N` is set to 1 so every country with a start-up gets a row and thin cells
 carry `low_n_flag` (green < 30); the former 500 gate is printed only as a sensitivity
 count. Cities keep the 100 floor (`MIN_CITY_N`). Verified on the full firm table: all
-46 countries reported (20 at the former >=500 floor, 21 low-n flagged), Spearman(startups
-per million, green intensity) ~ -0.63 on the population-matched countries (UK and Russia
-kept with NA).
+46 countries reported (20 at the former >=500 floor, 21 low-n flagged); T4.7 uses World
+Bank `SP.POP.TOTL` (single latest vintage, all 46 countries matched, no NA), with
+Spearman(startups per million, green intensity) ~ -0.53 on the 20 large countries and
+~ -0.14 across all 46.
 
 | Output | Register | Content |
 |---|---|---|
 | `F4_02_green_count_by_country.csv` | F4.2 | N green by country (figure data; PDF is a later cosmetic step) |
 | `T4_06_country_specialisation.csv` | T4.6 | share of European green, green intensity, location quotient (+ Stage 1 / Stage 2+3 variants, R1) |
 | `F4_03_lq_by_country.csv` | F4.3 | location quotient ranked, with the LQ=1 reference (figure data) |
-| `T4_07_per_capita_crosscheck.csv` | T4.7 | startups/green per capita from Eurostat `demo_pjan`; unmatched countries kept with NA |
+| `T4_07_per_capita_crosscheck.csv` | T4.7 | startups/green per capita from World Bank `SP.POP.TOTL`; all 46 countries matched |
 | `T4_08_concentration.csv` | T4.8 | top-5/top-10 country and top-5 city shares, green vs other (own denominators) |
 | `AP2_city_ranking.csv` | AP2 | city count, share, intensity, modal country (>=100 firms) |
 
@@ -237,10 +238,12 @@ the reporting steps.
 2. **Debt lender types.** `DealDebtLenderRelation.csv` is one of the 36 raw tables Step
    1 does not read. Area 9's lender-type breakdown needs it added as a ninth clean
    table in Step 1 (`USECOLS`, `FILTER_COL`, a `build_relation_clean` call).
-3. **Eurostat populations.** RESOLVED. T4.7 (per-capita cross-check) reads a committed
-   `data/sources/eurostat_population.csv` (Eurostat `demo_pjan`, fetched by
-   `step4_geography.fetch_eurostat`). The UK is unavailable after 2020 and is kept with
-   NA; refresh the year if a UK figure becomes needed.
+3. **Populations.** RESOLVED. T4.7 (per-capita cross-check) reads a committed
+   `data/sources/worldbank_population.csv` (World Bank `SP.POP.TOTL`, fetched by
+   `step4_geography.fetch_worldbank`). World Bank covers all 46 countries from one source
+   and a single latest year, so every country is matched (the UK and Russia included);
+   an earlier Eurostat `demo_pjan` source was dropped because it omitted the UK, Russia
+   and several others.
 
 ## Rules and decisions that constrain every step
 

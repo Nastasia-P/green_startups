@@ -273,10 +273,11 @@ def build_sample_register(
         section="4.2", output_id="T4.7", output_file="T4_07_per_capita_crosscheck.csv",
         statistic="startups_per_million", population="Full",
         n_total=geo_firms, n_green=None, n_other=None,
-        sample_definition="Same country set as T4.6 (all countries); Eurostat "
-                          "population matched where published, remainder shown as NA",
-        rationale="Tests whether uneven PitchBook coverage drives LQ rankings; six "
-                  "countries Eurostat does not publish are retained with NA population.",
+        sample_definition="Same country set as T4.6 (all countries); World Bank "
+                          "population (SP.POP.TOTL), single latest vintage, all 46 "
+                          "countries matched",
+        rationale="Tests whether uneven PitchBook coverage drives LQ rankings; World "
+                  "Bank covers every country from one source and year, so none is NA.",
         rule_refs="N9", step="4", status="built",
     ))
 

@@ -39,7 +39,7 @@ coverage is not misread as genuinely low green specialisation.
 | Input | Grain | Used for |
 |---|---|---|
 | `company_analysis.parquet` (Step 2) | 1 per firm | T4.6, T4.8, AP2, F4.2, F4.3, and the country side of T4.7 |
-| `eurostat_population.csv` | 1 per country | T4.7 only (population denominator) |
+| `worldbank_population.csv` | 1 per country | T4.7 only (population denominator) |
 
 Columns consumed from `company_analysis`: `company_id`, `green`, `green_signal_group`,
 `hq_country`, `hq_city`.
@@ -51,9 +51,9 @@ accepts either the Parquet file or the Step 2 output directory that contains it:
 2. the target machine's OneDrive `...\09_Python_Empirical Analysis\company_analysis.parquet`
 3. `<repo>/data/outputs/company_analysis.parquet`
 
-`eurostat_population.csv` resolves as `--population` > `STEP4_POPULATION` >
-`<repo>/data/sources/eurostat_population.csv`. It is a committed file, so the run needs
-no network. Regenerate it with `python -m empirical_analysis.step4_geography.fetch_eurostat`.
+`worldbank_population.csv` resolves as `--population` > `STEP4_POPULATION` >
+`<repo>/data/sources/worldbank_population.csv`. It is a committed file, so the run needs
+no network. Regenerate it with `python -m empirical_analysis.step4_geography.fetch_worldbank`.
 
 ---
 
@@ -107,13 +107,13 @@ by 116,005 as the reference.
 
 ### 4.2 `T4_07_per_capita_crosscheck.csv` — per-capita cross-check (T4.7)
 
-Same country set as T4.6, joined to Eurostat population. Countries without a population
-match (e.g. Russia) keep NA in the population columns and are retained with a note.
+Same country set as T4.6, joined to World Bank population (SP.POP.TOTL), a single
+latest vintage covering all 46 countries from one source, so no country carries NA.
 
 | Column | Formula / meaning |
 |---|---|
 | `country` | `hq_country` |
-| `population_m` | Eurostat population, millions |
+| `population_m` | World Bank population, millions |
 | `n_startups` | from T4.6 |
 | `green_n` | from T4.6 |
 | `startups_per_million` | `n_startups / population_m` |
@@ -178,19 +178,19 @@ row, the LQ = 1 line), ranked by `lq` descending.
 
 ---
 
-## 6. Eurostat population (T4.7)
+## 6. World Bank population (T4.7)
 
-Population is the only external data the whole plan uses (spec §Scope). It comes from
-Eurostat table **`demo_pjan`** (population on 1 January), filtered to `sex = T`,
-`age = TOTAL`, most recent year with broad country coverage.
+Population is the only external data the whole plan uses (spec §Scope). It comes from the
+**World Bank** indicator **`SP.POP.TOTL`** (total population), taking each country's most
+recent value — the World Bank returns the same latest year for every country, so the
+cross-check uses one consistent vintage and one source for all 46 countries.
 
-`fetch_eurostat.py` downloads it through the public JSON-stat API and writes
-`data/sources/eurostat_population.csv` with columns `geo_code`, `country_eurostat`,
-`year`, `population`. The PitchBook `hq_country` → Eurostat `geo_code` name map lives in
-`config.py` (`COUNTRY_TO_EUROSTAT`), covering the naming gaps: `United Kingdom → UK`,
-`Czech Republic → CZ`/CZE, `Greece → EL`, plus the non-EU members Eurostat still
-publishes (`Switzerland → CH`, `Norway → NO`). Countries with no Eurostat entry (e.g.
-Russia) are kept with NA population.
+`fetch_worldbank.py` downloads it through the public World Bank v2 API and writes
+`data/sources/worldbank_population.csv` with columns `iso2`, `country`, `year`,
+`population`. The PitchBook `hq_country` → World Bank ISO-alpha-2 map lives in `config.py`
+(`COUNTRY_TO_ISO2`); World Bank uses `GR` for Greece and `GB` for the United Kingdom, and
+covers every start-up country (including the UK, Russia, Gibraltar and the micro-states),
+so no country is left with NA population.
 
 The committed CSV is the runtime input, so the analysis machine needs no network.
 Re-fetching is optional and only needed to refresh the year.
@@ -206,8 +206,8 @@ The run prints these at the end. Step 4 is done when they pass.
       over countries equals the full 116,005
 - [ ] `lq` uses the fixed EU reference `8,306 / 116,005`; a country at the EU average
       reads `lq ≈ 1`
-- [ ] T4.7 joins Eurostat population; the Spearman(startups_per_million, green_intensity)
-      is printed (reference ≈ -0.67)
+- [ ] T4.7 joins World Bank population (all 46 countries matched); the
+      Spearman(startups_per_million, green_intensity) is printed (reference ≈ -0.67)
 - [ ] T4.8 shares use each group's own denominator; green vs other are comparable
 - [ ] AP2 lists cities with ≥100 start-ups; firms with blank `hq_city` are excluded from
       city rows only
@@ -222,8 +222,8 @@ The run prints these at the end. Step 4 is done when they pass.
 | Country minimum denominator | 500 (sensitivity count at 800 printed) | `MIN_COUNTRY_N` in `config.py` |
 | City minimum denominator | 100 | `MIN_CITY_N` in `config.py` |
 | Low-n flag threshold | 30 | `LOW_N_FLAG` in `config.py` |
-| Eurostat year | most recent broad-coverage year at fetch time | `fetch_eurostat.py` |
-| PitchBook → Eurostat country map | EU27 + UK + CH + NO + neighbours | `COUNTRY_TO_EUROSTAT` in `config.py` |
+| World Bank year | most recent value at fetch time (uniform across countries) | `fetch_worldbank.py` |
+| PitchBook → World Bank ISO2 map | all 46 start-up countries | `COUNTRY_TO_ISO2` in `config.py` |
 
 ---
 
@@ -239,8 +239,8 @@ The run prints these at the end. Step 4 is done when they pass.
 ## 10. How to run it
 
 ```bash
-# refresh the Eurostat population file (optional; needs network)
-python -m empirical_analysis.step4_geography.fetch_eurostat
+# refresh the World Bank population file (optional; needs network)
+python -m empirical_analysis.step4_geography.fetch_worldbank
 
 # build from the local Step 2 output
 python -m empirical_analysis.step4_geography.run \

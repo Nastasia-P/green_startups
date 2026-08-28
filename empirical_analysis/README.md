@@ -182,20 +182,20 @@ can be large and unremarkable or small and highly specialised — the location q
 routinely inverts the raw-count ranking (in the current data the UK leads by green
 count but Finland, Spain and Switzerland lead by specialisation). Descriptive only.
 
-Reads the Step 2 firm table (`company_analysis.parquet`) plus a committed Eurostat
-population file (`data/sources/eurostat_population.csv`) for the per-capita
+Reads the Step 2 firm table (`company_analysis.parquet`) plus a committed World Bank
+population file (`data/sources/worldbank_population.csv`) for the per-capita
 cross-check. Country denominators use the full 116,005 population. The country floor
 was dropped (per request): every country with at least one start-up gets a row and
 thin cells carry `low_n_flag` (green < 30); cities still need ≥100 start-ups.
 
 ```bash
-# optional: refresh the Eurostat population file (needs network)
-python -m empirical_analysis.step4_geography.fetch_eurostat
+# optional: refresh the World Bank population file (needs network)
+python -m empirical_analysis.step4_geography.fetch_worldbank
 
 # build from the local Step 2 output
 python -m empirical_analysis.step4_geography.run \
     --firm-table data/outputs/company_analysis.parquet \
-    --population data/sources/eurostat_population.csv \
+    --population data/sources/worldbank_population.csv \
     --output-dir data/outputs/chapter4
 
 # on the target machine, the OneDrive paths resolve on their own
@@ -205,7 +205,7 @@ python -m empirical_analysis.step4_geography.run
 Paths resolve automatically; override if needed:
 
 - firm table: `--firm-table` > `STEP4_FIRM_TABLE` > OneDrive `09_...\company_analysis.parquet` > `data/outputs/company_analysis.parquet`
-- population: `--population` > `STEP4_POPULATION` > `data/sources/eurostat_population.csv`
+- population: `--population` > `STEP4_POPULATION` > `data/sources/worldbank_population.csv`
 - output dir: `--output-dir` > `STEP4_OUTPUT_DIR` > OneDrive `09_...\chapter4_outputs` > `data/outputs/chapter4`
 
 What to expect (CSV files in the output dir):
@@ -213,7 +213,7 @@ What to expect (CSV files in the output dir):
 | File | Contents |
 |---|---|
 | `T4_06_country_specialisation.csv` | per country (all countries): green count, share of European green, green intensity, location quotient, plus Stage 1 / Stage 2+3 LQ variants; `low_n_flag` marks thin rows |
-| `T4_07_per_capita_crosscheck.csv` | same countries joined to Eurostat population: start-ups and green per million; unmatched countries (Russia, the post-2020 UK) kept with NA |
+| `T4_07_per_capita_crosscheck.csv` | same countries joined to World Bank population (SP.POP.TOTL): start-ups and green per million; all 46 countries matched |
 | `T4_08_concentration.csv` | top-5 / top-10 country and top-5 city shares, green vs other, each on its own denominator |
 | `AP2_city_ranking.csv` | per city (≥100 firms): green count, share, intensity, modal country |
 | `F4_02_green_count_by_country.csv` | figure data: absolute green count by country |
@@ -234,13 +234,12 @@ intensity) of about −0.63.
 | `hq_country` | country counts, intensity, location quotient (T4.6-T4.8, F4.2, F4.3) | 100% / 100% | High |
 | `hq_city` | city ranking (AP2), top-5 city concentration (T4.8) | 98.5% / 99.4% | High |
 | `green`, `green_signal_group` | green counts/intensity; Stage 1 vs Stage 2+3 LQ variants | 100% / 100% | High |
-| `eurostat_population.csv` (external) | per-capita cross-check (T4.7) | matched for 40/46 countries (each country's most recent Eurostat vintage); Russia, Belarus, Bosnia, Andorra, San Marino, Gibraltar kept as NA | Medium — external join; six countries Eurostat does not publish stay unmatched |
+| `worldbank_population.csv` (external) | per-capita cross-check (T4.7) | matched for all 46/46 countries (single latest World Bank vintage, SP.POP.TOTL) | Medium — external join; World Bank current-year estimate |
 
 Location fields are essentially complete, so the specialisation ranking is
 high-confidence. Only the **per-capita cross-check** carries a caveat, and it is a
-cross-check rather than a headline: the six countries Eurostat does not publish
-(Russia, Belarus, Bosnia, Andorra, San Marino, Gibraltar) are shown with NA rather than
-dropped. The country floor is off (`MIN_COUNTRY_N = 1`), so every
+cross-check rather than a headline, and with World Bank every country is matched, so
+no country carries NA population. The country floor is off (`MIN_COUNTRY_N = 1`), so every
 country appears and thin rows are marked with `low_n_flag` rather than dropped; cities
 keep their `MIN_CITY_N = 100` floor.
 

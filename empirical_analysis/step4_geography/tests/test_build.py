@@ -3,7 +3,7 @@
 A small synthetic firm table (three countries, one below the reporting minimum)
 exercises the geography builders: the country location quotient against the fixed
 EU-wide reference (rule N9 — the sub-minimum country stays in the denominator), the
-Stage 1 / Stage 2+3 robustness split (R1), the Eurostat per-capita join and its
+Stage 1 / Stage 2+3 robustness split (R1), the World Bank per-capita join and its
 Spearman check (T4.7), group-own-denominator concentration (T4.8), and the city
 ranking with its minimum and modal country (AP2).
 """
@@ -56,11 +56,11 @@ def _firm_frame() -> pd.DataFrame:
 def _population_frame() -> pd.DataFrame:
     return pd.DataFrame(
         [
-            {"geo_code": "DE", "country_eurostat": "Germany", "year": 2024,
+            {"iso2": "DE", "country": "Germany", "year": 2025,
              "population": 8_000_000},
-            {"geo_code": "FR", "country_eurostat": "France", "year": 2024,
+            {"iso2": "FR", "country": "France", "year": 2025,
              "population": 6_000_000},
-            {"geo_code": "IT", "country_eurostat": "Italy", "year": 2024,
+            {"iso2": "IT", "country": "Italy", "year": 2025,
              "population": 5_000_000},
         ]
     )
@@ -111,11 +111,12 @@ def test_per_capita_join_and_spearman():
 
 def test_per_capita_keeps_unmatched_country_as_na():
     firm = _firm_frame()
-    firm.loc[firm["company_id"] == "F9", "hq_country"] = "Russia"  # no Eurostat code
+    # Atlantis is not in the country->ISO2 map, so it never joins a population row.
+    firm.loc[firm["company_id"] == "F9", "hq_country"] = "Atlantis"
     t46 = build_country_specialisation(firm, min_country_n=1)
     t47 = build_per_capita(t46, _population_frame()).set_index("country")
-    assert "Russia" in t47.index
-    assert pd.isna(t47.loc["Russia", "population_m"])
+    assert "Atlantis" in t47.index
+    assert pd.isna(t47.loc["Atlantis", "population_m"])
 
 
 def test_concentration_uses_group_own_denominator():

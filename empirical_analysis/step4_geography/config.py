@@ -1,7 +1,7 @@
 """Configuration for Step 4 (geography).
 
 Self-contained: input/output paths, the reporting minimums (decision D4), the group
-labels, the PitchBook -> Eurostat country map, and the acceptance anchors all live
+labels, the PitchBook -> World Bank ISO2 country map, and the acceptance anchors all live
 here.
 """
 
@@ -41,12 +41,12 @@ def _resolve_firm_table() -> Path:
 
 FIRM_TABLE: Path = _resolve_firm_table()
 
-# --- Eurostat population file (committed input for T4.7) -------------------
+# --- World Bank population file (committed input for T4.7) -----------------
 # Resolution order (first existing wins); --population overrides all of these.
 #   1. env var STEP4_POPULATION
-#   2. <repo>/data/sources/eurostat_population.csv
+#   2. <repo>/data/sources/worldbank_population.csv
 _POPULATION_CANDIDATES_ANY = [
-    str(REPO_ROOT / "data" / "sources" / "eurostat_population.csv"),
+    str(REPO_ROOT / "data" / "sources" / "worldbank_population.csv"),
 ]
 
 
@@ -59,7 +59,7 @@ def _resolve_population() -> Path:
                 return path
         except OSError:
             continue
-    return REPO_ROOT / "data" / "sources" / "eurostat_population.csv"
+    return REPO_ROOT / "data" / "sources" / "worldbank_population.csv"
 
 
 POPULATION_FILE: Path = _resolve_population()
@@ -121,22 +121,21 @@ EU_GREEN_INTENSITY = round(GREEN_TOTAL / POP_TOTAL, 6)
 # Reference Spearman(startups_per_million, green_intensity) from the spec.
 SPEARMAN_REFERENCE = -0.67
 
-# --- Eurostat fetch (fetch_eurostat.py) ------------------------------------
-EUROSTAT_DATASET = "demo_pjan"          # population on 1 January
-# Fetched most-recent-first and backfilled per country: candidate/ex-member states
-# (AL, UA, XK, UK) only appear in older vintages, so we keep each country's latest
-# available year rather than a single wholesale year.
-EUROSTAT_YEARS = (2024, 2023, 2022, 2021, 2020)
-EUROSTAT_BASE_URL = (
-    "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
-)
+# --- World Bank fetch (fetch_worldbank.py) ---------------------------------
+# Indicator SP.POP.TOTL (total population). We take each country's most recent value
+# (World Bank returns a single, uniform latest year across all countries), so the
+# per-capita cross-check uses one consistent vintage and one source for every country.
+WORLDBANK_INDICATOR = "SP.POP.TOTL"
+WORLDBANK_BASE_URL = "https://api.worldbank.org/v2"
 
-# PitchBook hq_country -> Eurostat geo code (rule: keep unmatched as NA population).
-# Eurostat uses EL for Greece and UK for the United Kingdom; non-EU members it still
-# publishes (CH, NO, candidate/neighbour countries) are included where available.
-COUNTRY_TO_EUROSTAT = {
+# PitchBook hq_country -> World Bank ISO alpha-2 code. World Bank covers all 46
+# start-up countries (including the UK, Russia, Gibraltar and the micro-states), so no
+# country is left with NA population. Note WB uses GR for Greece and GB for the UK.
+COUNTRY_TO_ISO2 = {
     "Albania": "AL",
+    "Andorra": "AD",
     "Austria": "AT",
+    "Belarus": "BY",
     "Belgium": "BE",
     "Bosnia and Herzegovina": "BA",
     "Bulgaria": "BG",
@@ -148,7 +147,8 @@ COUNTRY_TO_EUROSTAT = {
     "Finland": "FI",
     "France": "FR",
     "Germany": "DE",
-    "Greece": "EL",
+    "Gibraltar": "GI",
+    "Greece": "GR",
     "Hungary": "HU",
     "Iceland": "IS",
     "Ireland": "IE",
@@ -168,6 +168,8 @@ COUNTRY_TO_EUROSTAT = {
     "Poland": "PL",
     "Portugal": "PT",
     "Romania": "RO",
+    "Russia": "RU",
+    "San Marino": "SM",
     "Serbia": "RS",
     "Slovakia": "SK",
     "Slovenia": "SI",
@@ -175,9 +177,7 @@ COUNTRY_TO_EUROSTAT = {
     "Sweden": "SE",
     "Switzerland": "CH",
     "Ukraine": "UA",
-    "United Kingdom": "UK",
-    # No Eurostat demo_pjan entry in any recent vintage (kept with NA population):
-    #   Andorra, Belarus, Bosnia and Herzegovina, Gibraltar, Russia, San Marino
+    "United Kingdom": "GB",
 }
 
 # --- Engineering -----------------------------------------------------------

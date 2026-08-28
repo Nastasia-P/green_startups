@@ -31,7 +31,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--clean-dir", type=Path, default=None,
                    help="Directory with the Step 1 clean parquet tables.")
     p.add_argument("--population", type=Path, default=None,
-                   help="Eurostat population CSV (Step 4 T4.7 re-run input).")
+                   help="World Bank population CSV (Step 4 T4.7 re-run input).")
     p.add_argument("--output-dir", type=Path, default=None,
                    help="Directory to write the reconciliation CSV and to compare "
                         "on-disk outputs against.")

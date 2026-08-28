@@ -5,7 +5,7 @@ Examples
     python -m empirical_analysis.step4_geography.run --verbose
     python -m empirical_analysis.step4_geography.run \
         --firm-table data/outputs/company_analysis.parquet \
-        --population data/sources/eurostat_population.csv \
+        --population data/sources/worldbank_population.csv \
         --output-dir data/outputs/chapter4
 """
 
@@ -25,8 +25,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Path to company_analysis.parquet, or the Step 2 output "
                         "directory that contains it.")
     p.add_argument("--population", type=Path, default=None,
-                   help="Eurostat population CSV (default: data/sources/"
-                        "eurostat_population.csv).")
+                   help="World Bank population CSV (default: data/sources/"
+                        "worldbank_population.csv).")
     p.add_argument("--output-dir", type=Path, default=None,
                    help="Directory to write CSV outputs.")
     p.add_argument("--min-country-n", type=int, default=None,

@@ -1,6 +1,6 @@
 """Input access for Step 8.
 
-Loads the Step 2 firm table, the Step 1 clean tables, the Eurostat population file,
+Loads the Step 2 firm table, the Step 1 clean tables, the World Bank population file,
 and (for the stale-file guard) the on-disk output CSVs. No transformation here.
 """
 
@@ -77,13 +77,11 @@ def load_verticals(clean_dir: Path | None = None) -> pd.DataFrame:
 
 
 def load_population(population_path: Path | None = None) -> pd.DataFrame:
-    """Load the committed Eurostat population file; empty frame if absent."""
+    """Load the committed World Bank population file; empty frame if absent."""
     path = Path(population_path or config.POPULATION_FILE)
     if not path.exists():
         log(f"[step8] load population: {path} MISSING -> empty")
-        return pd.DataFrame(
-            columns=["geo_code", "country_eurostat", "year", "population"]
-        )
+        return pd.DataFrame(columns=["iso2", "country", "year", "population"])
     df = pd.read_csv(path)
     log(f"[step8] load population: {path} rows={len(df)}")
     return df
