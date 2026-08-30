@@ -211,11 +211,15 @@ def check_low_n_flag(tables: dict[str, pd.DataFrame]) -> list[dict]:
     for name, df in tables.items():
         if df.empty or "low_n_flag" not in df.columns or "n_green" not in df.columns:
             continue
-        expected_flag = (_num(df["n_green"]) < config.LOW_N_FLAG).astype(int)
+        # The reliability denominator is n_green for most tables, but a table may flag
+        # on a different green count (e.g. the by-cohort access table flags thin
+        # cohorts via green_n_cohort, not the flag-hit n_green).
+        gcol = "green_n_cohort" if "green_n_cohort" in df.columns else "n_green"
+        expected_flag = (_num(df[gcol]) < config.LOW_N_FLAG).astype(int)
         got = _num(df["low_n_flag"]).astype(int)
         bad = int((expected_flag != got).sum())
         rows.append(_row(f"low_n_flag.{name}", "low_n_flag",
-                         f"{name}: (n_green < {config.LOW_N_FLAG}) == low_n_flag",
+                         f"{name}: ({gcol} < {config.LOW_N_FLAG}) == low_n_flag",
                          "0 mismatches", f"{bad} mismatches",
                          "PASS" if bad == 0 else "FAIL"))
     # Headline / country tables must carry a low_n_flag column.

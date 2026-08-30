@@ -122,6 +122,14 @@ ACCESS_FLAGS = [
     ("any_crowdfunding", "any_crowdfunding"),
 ]
 
+# Access flags reported by founding cohort in T4.9b (headline access types only).
+ACCESS_FLAGS_BY_COHORT = [
+    ("any_financing", "financed"),
+    ("any_vc", "any_vc"),
+    ("any_grant", "any_grant"),
+    ("any_accelerator", "any_accelerator"),
+]
+
 # Firm-level amount fields reported by cohort in T4.10 (rules N1, N4).
 AMOUNT_FIELDS = ["total_raised", "last_deal_size", "median_deal_size"]
 

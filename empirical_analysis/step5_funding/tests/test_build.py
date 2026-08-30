@@ -18,6 +18,7 @@ from empirical_analysis.step5_funding.build import (
     build_all,
     build_deal_size_by_stage,
     build_funding_access,
+    build_funding_access_by_cohort,
     build_stage_composition,
     build_total_raised_by_cohort,
     build_trajectories,
@@ -114,6 +115,27 @@ def test_access_uses_full_population_denominator():
     assert t49.loc["any_financing", "n_green"] == 2
     # other: 4 firms (F3, F4, F5, F7); 3 financed -> 3/4.
     assert t49.loc["any_financing", "other_pct"] == 0.75
+
+
+def test_access_by_cohort_reconciles_and_uses_cohort_denominator():
+    t49b = build_funding_access_by_cohort(_firm_frame())
+    # Four headline flags x four cohorts.
+    assert set(t49b["financing_type"]) == {
+        "any_financing", "any_vc", "any_grant", "any_accelerator"}
+    fin = t49b[t49b["financing_type"] == "any_financing"].set_index("cohort")
+    # 2016-2018: green F1 (financed) of 1 green -> 1.0; other F3,F7 financed of 2 -> 1.0.
+    assert fin.loc["2016-2018", "green_pct"] == 1.0
+    assert fin.loc["2016-2018", "green_n_cohort"] == 1
+    assert fin.loc["2016-2018", "other_pct"] == 1.0
+    assert fin.loc["2016-2018", "other_n_cohort"] == 2
+    # 2019-2021: green F2 not financed of 1 -> 0.0; other F5 financed of 1 -> 1.0.
+    assert fin.loc["2019-2021", "green_pct"] == 0.0
+    assert fin.loc["2019-2021", "other_pct"] == 1.0
+    # Cohort split reconciles with the overall T4.9 any_financing count (5 financed).
+    t49 = build_funding_access(_firm_frame()).set_index("financing_type")
+    assert int(fin["n_startups"].sum()) == int(t49.loc["any_financing", "n_startups"])
+    # Thin cohorts (fewer than 30 green) are flagged.
+    assert (t49b["low_n_flag"] == 1).all()
 
 
 def test_amounts_exclude_non_financed():

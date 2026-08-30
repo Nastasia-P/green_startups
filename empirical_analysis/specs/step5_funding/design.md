@@ -115,6 +115,26 @@ Extensive margin, **full population** (rule N2). One row per financing type.
 
 `any_financing` equals `financed`; its `green_pct` must match Step 3's `share_financed`.
 
+### 4.1b `T4_09b_funding_access_by_cohort.csv` — access by founding cohort (T4.9b)
+
+Founding-cohort-adjusted access, **full population** (rule N2) reported by cohort
+(rule N4), so an older firm's longer fundraising window is not compared with a younger
+one's. Four headline flags × four cohorts.
+
+| Column | Meaning |
+|---|---|
+| `financing_type` | any_financing, any_vc, any_grant, any_accelerator |
+| `cohort` | 2016-2018 / 2019-2021 / 2022-2024 / 2025-2026 |
+| `green_pct` | share of the cohort's green firms with the flag (denominator `green_n_cohort`) |
+| `other_pct` | share of the cohort's other firms with the flag (denominator `other_n_cohort`) |
+| `pp_difference` | `(green_pct - other_pct) * 100` |
+| `green_n_cohort`, `other_n_cohort` | cohort group sizes (the share denominators) |
+| `low_n_flag` | 1 where `green_n_cohort < 30` |
+| `n_green`, `n_others`, `n_startups` | firms carrying the flag (green / other / total) |
+
+Summing `any_financing` over cohorts reconciles with T4.9's `any_financing` n; the
+cohort group sizes sum to 8,306 green / 107,699 other.
+
 ### 4.2 `T4_10_total_raised_by_cohort.csv` — total raised by cohort (T4.10)
 
 Amount comparison, **financed subsample** with non-null `total_raised`, within cohort

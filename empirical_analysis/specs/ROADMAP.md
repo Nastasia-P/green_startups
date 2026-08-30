@@ -99,6 +99,7 @@ about as fast as others (median 1 year) but first VC more slowly (2 vs 1).
 | Output | Register | Content |
 |---|---|---|
 | `T4_09_funding_access.csv` | T4.9 | access flags: any financing/VC/grant/debt/accelerator/growth-PE/crowdfunding (+ R1 stage split) |
+| `T4_09b_funding_access_by_cohort.csv` | T4.9b | founding-cohort-adjusted access: any financing/VC/grant/accelerator, green vs other, per cohort (own-denominator shares, low_n_flag) |
 | `T4_10_total_raised_by_cohort.csv` | T4.10 | total_raised (+ last/typical deal size) n/median/Q25/Q75/mean/P90 by cohort |
 | `T4_11_first_financing_size_by_stage.csv` | T4.11 | first financing size by stage_group, with the Actual share |
 | `T4_12_post_valuation.csv` | T4.12 | post-money valuation, green vs other; low coverage, n reported prominently |

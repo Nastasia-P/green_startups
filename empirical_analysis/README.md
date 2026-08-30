@@ -280,6 +280,7 @@ What to expect (CSV files in the output dir):
 | File | Contents |
 |---|---|
 | `T4_09_funding_access.csv` | access flags (any financing / VC / grant / debt / accelerator / growth-PE / crowdfunding), green vs other, full population |
+| `T4_09b_funding_access_by_cohort.csv` | founding-cohort-adjusted access: any financing / VC / grant / accelerator, green vs other, within each cohort (shares use the cohort group's own denominator; `low_n_flag` marks thin cohorts) |
 | `T4_10_total_raised_by_cohort.csv` | total_raised (plus last and typical deal size) by cohort, financed subsample: median, IQR, mean, P90, ratio |
 | `T4_11_first_financing_size_by_stage.csv` | first deal size by stage, with the Actual-vs-Estimated share |
 | `T4_12_post_valuation.csv` | post-money valuation, green vs other; low coverage, so n is reported prominently |

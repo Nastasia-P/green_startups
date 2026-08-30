@@ -125,6 +125,46 @@ def build_funding_access(firm: pd.DataFrame) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------
+# T4.9b access to finance by founding cohort (full population, rules N2, N4)
+# --------------------------------------------------------------------------
+def build_funding_access_by_cohort(firm: pd.DataFrame) -> pd.DataFrame:
+    """Cohort-adjusted access: each headline flag's green-vs-other reach within
+    founding cohort. Access stays on the full population (rule N2, denominator is the
+    cohort's green / other firms); reporting by cohort (rule N4) controls for the fact
+    that older firms have had longer to raise. Shares use the cohort-group denominator,
+    while the n_green / n_others trio counts firms carrying the flag (as in T4.9)."""
+    rows = []
+    for label, col in config.ACCESS_FLAGS_BY_COHORT:
+        if col not in firm.columns:
+            continue
+        for cohort in config.COHORT_ORDER:
+            sub = firm[firm["cohort"] == cohort]
+            g, o = _split(sub)
+            g_hit = (g[col] == 1)
+            o_hit = (o[col] == 1)
+            gs = float(g_hit.mean()) if len(g) else float("nan")
+            os_ = float(o_hit.mean()) if len(o) else float("nan")
+            gn = int(g_hit.sum())
+            on = int(o_hit.sum())
+            rows.append(
+                {
+                    "financing_type": label,
+                    "cohort": cohort,
+                    "green_pct": round(gs, 4),
+                    "other_pct": round(os_, 4),
+                    "pp_difference": _pp(gs, os_),
+                    "green_n_cohort": len(g),
+                    "other_n_cohort": len(o),
+                    "low_n_flag": int(len(g) < config.LOW_N_FLAG),
+                    "n_green": gn,
+                    "n_others": on,
+                    "n_startups": gn + on,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------
 # T4.10 total raised by cohort (financed subsample, rules N1, N4)
 # --------------------------------------------------------------------------
 def build_total_raised_by_cohort(firm: pd.DataFrame) -> pd.DataFrame:
@@ -578,6 +618,7 @@ def build_all(firm: pd.DataFrame, deals: pd.DataFrame | None = None) -> Step5Res
     deals = deals if deals is not None else pd.DataFrame()
 
     result.tables["T4_09_funding_access"] = build_funding_access(firm)
+    result.tables["T4_09b_funding_access_by_cohort"] = build_funding_access_by_cohort(firm)
     result.tables["T4_10_total_raised_by_cohort"] = build_total_raised_by_cohort(firm)
     result.tables["T4_11_first_financing_size_by_stage"] = build_first_size_by_stage(firm, deals)
     result.tables["T4_12_post_valuation"] = build_post_valuation(firm, deals)
@@ -591,6 +632,13 @@ def build_all(firm: pd.DataFrame, deals: pd.DataFrame | None = None) -> Step5Res
     result.caption["T4_09_funding_access"] = (
         "Access is the extensive margin on the full 116,005 population (rule N2); "
         "financed comes from the deal record, never from total_raised > 0."
+    )
+    result.caption["T4_09b_funding_access_by_cohort"] = (
+        "Founding-cohort-adjusted access (rules N2, N4): green-vs-other reach of any "
+        "financing, any VC, any grant and any accelerator within each cohort, so a "
+        "2016-2018 firm's longer fundraising window is not compared with a 2025 one's. "
+        "Shares use each cohort group's own denominator (green_n_cohort / "
+        "other_n_cohort); low_n_flag marks cohorts with fewer than 30 green firms."
     )
     result.caption["T4_10_total_raised_by_cohort"] = (
         "Amounts on the financed subsample only (rule N1), within founding cohort "
@@ -642,6 +690,16 @@ def acceptance_report(firm: pd.DataFrame, result: Step5Result) -> list[str]:
             f"T4.9 any_financing green_pct={t49.loc['any_financing', 'green_pct']} "
             f"(Step 3 share_financed green={round(share_fin_green, 4)})"
         )
+
+    t49b = result.tables.get("T4_09b_funding_access_by_cohort")
+    if t49b is not None and not t49b.empty and "any_financing" in t49.index:
+        fin_rows = t49b[t49b["financing_type"] == "any_financing"]
+        by_cohort_n = int(fin_rows["n_startups"].sum())
+        overall_n = int(t49.loc["any_financing", "n_startups"])
+        lines.append(f"T4.9b any_financing cohort n sum={by_cohort_n} "
+                     f"(T4.9 any_financing n={overall_n})")
+        if by_cohort_n != overall_n:
+            lines.append("  WARN: T4.9b cohort split does not reconcile with T4.9")
 
     t10 = result.tables["T4_10_total_raised_by_cohort"]
     tr = t10[t10["amount_field"] == "total_raised"]

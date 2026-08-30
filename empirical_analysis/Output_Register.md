@@ -196,6 +196,16 @@ Structure: **Access → Amount → Timing/Stage → Source of capital**. The cha
 ⚠️ **Rule N2:** `financed` = ≥1 completed qualifying deal, never `total_raised > 0`.
 ⚠️ **Rule N8:** accelerator reported separately, never folded into VC or seed.
 
+### T4.9b · Access to finance by founding cohort
+**Purpose:** Founding-cohort-adjusted access — separates a real green-vs-other access gap from the fact that older firms have had longer to raise. Complements T4.9's pooled shares.
+**Grain:** financing type × cohort · **Population:** Full (rule N2), reported by cohort (rule N4) · **Robustness:** —
+
+| Column | Content |
+|---|---|
+| Financing type · Cohort · Green % · Other % · pp difference · Green n (cohort) · Other n (cohort) · low_n_flag · Green n · Other n · n_startups |
+
+**Rows:** the four headline access types (any financing, any VC, any grant, any accelerator) × four cohorts (2016-2018 / 2019-2021 / 2022-2024 / 2025-2026). Shares use each cohort group's own denominator (`green_n_cohort` / `other_n_cohort`); the trio counts firms carrying the flag; `low_n_flag` marks cohorts with fewer than 30 green firms. Summing any_financing across cohorts reconciles with T4.9.
+
 ### 4.3B: Amount
 
 ### T4.10 · Total raised by cohort ★
