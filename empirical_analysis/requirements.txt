@@ -3,3 +3,7 @@
 pandas>=2.2
 pyarrow>=15.0
 pytest>=8.0
+# Chapter 4 map set (step4_maps): choropleth rendering
+geopandas>=1.0
+mapclassify>=2.6
+matplotlib>=3.8

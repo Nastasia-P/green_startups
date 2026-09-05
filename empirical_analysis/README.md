@@ -22,11 +22,13 @@ step maps to the thesis output register.
 | 8 | `step8_verify` | cross-table reconciliation (`step8_reconciliation.csv`) | done |
 | 9 | `step9_keyword_recovery` | keyword-recovery robustness diagnostic (`keyword_recovery_*`, `T_keyword_recovery_*`) | done (supplementary) |
 | 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
+| 11 | `step4_maps` | five European choropleth maps of the Step 4 outputs (`F4_M1`-`F4_M5`, PNG + PDF) | done (supplementary) |
 
-Steps 9 and 10 are **supplementary, strictly read-only** exercises requested by the
-supervisor. They add nothing to the core pipeline (they never modify
+Steps 9, 10 and the map set (`step4_maps`) are **supplementary, strictly read-only**
+exercises. They add nothing to the core pipeline (they never modify
 `company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
-only read prior outputs and write their own new files.
+only read prior outputs and write their own new files. `step4_maps` reads the Step 4
+CSVs and only renders images — it computes no new measure.
 
 ## Prerequisites
 
@@ -626,6 +628,57 @@ exited/non-operating. **Interpretation boundary:** this is a current-snapshot
 (7 Jul 2026 extract) status composition, not a survival panel; avoid longitudinal
 "survival/failure rate" language or causal claims about green vs other survival.
 
+## Map set — European choropleths (supplementary, read-only)
+
+Renders the Step 4 geography as five European choropleth maps, grouped into three
+blocks: **A. absolute distribution** (M1 total start-ups, M2 green start-ups),
+**B. population-adjusted density** (M3 start-ups per million, M4 green per million),
+and **C. relative green specialisation** (M5 green location quotient). It reads only
+the existing Step 4 CSVs (`F4_02_green_count_by_country.csv`,
+`T4_07_per_capita_crosscheck.csv`, `F4_03_lq_by_country.csv`) plus a committed Natural
+Earth geometry, and computes no new measure. Full module docs:
+[`step4_maps/README.md`](step4_maps/README.md).
+
+All maps share one colour scheme (`viridis`) on the equal-area European projection
+(EPSG:3035). M1-M4 use a continuous log colour scale with plain-number colorbars
+(counts/densities are heavily skewed); M5 marks the LQ = 1 European benchmark with a
+line on the colorbar. Geometry is clipped to a European window so overseas territories
+do not distort the frame.
+
+```bash
+# render the five maps (the geometry is already committed, so this is all you need)
+python -m empirical_analysis.step4_maps.run
+
+# optional: only to refresh the committed geometry (needs network)
+python -m empirical_analysis.step4_maps.fetch_geometry
+
+# example with explicit paths (all optional)
+python -m empirical_analysis.step4_maps.run \
+    --input-dir data/outputs/chapter4 \
+    --geometry data/sources/europe_ne50m.geojson \
+    --output-dir data/outputs/chapter4/maps
+```
+
+Overridable inputs (first match wins; no flags are required):
+
+| CLI flag | Env var | Default |
+|---|---|---|
+| `--input-dir` | `STEP4_MAPS_INPUT_DIR` | `data/outputs/chapter4` (holds the Step 4 CSVs) |
+| `--geometry` | `STEP4_MAPS_GEOMETRY` | `data/sources/europe_ne50m.geojson` |
+| `--output-dir` | `STEP4_MAPS_OUTPUT_DIR` | `data/outputs/chapter4/maps` |
+
+What to expect (in `data/outputs/chapter4/maps/`):
+
+| File | Contents |
+|---|---|
+| `F4_M1_total_startups.{png,pdf}` | total start-ups by country (`n_startups`) |
+| `F4_M2_green_startups.{png,pdf}` | green start-ups by country (`n_green`) |
+| `F4_M3_startups_per_million.{png,pdf}` | start-ups per million inhabitants |
+| `F4_M4_green_per_million.{png,pdf}` | green start-ups per million inhabitants |
+| `F4_M5_green_lq.{png,pdf}` | green-start-up location quotient (benchmark LQ = 1) |
+| `maps_manifest.csv` | one row per map (source file/column, value range, output files) |
+| `maps_report.txt` | crosswalk validation (46 countries) and per-map highest/lowest |
+
 ## Acceptance anchors
 
 A correct full run reproduces:
@@ -651,3 +704,5 @@ python -m pytest empirical_analysis/ -q
 | `data/outputs/clean_tables/` | Step 1 output |
 | `data/outputs/company_analysis.parquet` | Step 2 output |
 | `data/outputs/chapter4/` | Step 3-10 tables and figure data (incl. Step 9/10 outputs) |
+| `data/sources/europe_ne50m.geojson` | committed Natural Earth country geometry (46 countries) for the map set |
+| `data/outputs/chapter4/maps/` | map-set output (`F4_M1`-`F4_M5` PNG/PDF, manifest, report) |
