@@ -590,13 +590,22 @@ gets a traceable reason for baseline membership/non-membership (`fails_ownership
 8,306 green), freshly-applied classifier labels for the outside firms.
 
 ```bash
-# heavy read of the 5.4 GB source; run on the analysis node
-module load python/3.12.13-aocl5.3
+# heavy read of the 5.4 GB source; run from the repository root
 python -m empirical_analysis.step10_expanded_status.build
 ```
 
-Inputs overridable via CLI flags (or env vars `KWR_STEP10_SOURCE`, `KWR_POPULATION`,
-`KWR_STANDALONE`, `KWR_PHRASES`, `KWR_OUT_DIR`).
+Every input is overridable via CLI flags (highest priority) or the matching env vars
+(`KWR_STEP10_SOURCE`, `KWR_POPULATION`, `KWR_STANDALONE`, `KWR_PHRASES`,
+`KWR_OUT_DIR`); no flags are required, and any subset can be overridden:
+
+```bash
+python -m empirical_analysis.step10_expanded_status.build \
+  --source /path/to/Company_Europe.csv \
+  --population /path/to/population_key.parquet \
+  --standalone /path/to/strong_terms_active.csv \
+  --phrases /path/to/strong_term_phrases.csv \
+  --out-dir /path/to/outputs
+```
 
 What to expect (in `data/outputs/chapter4/`):
 

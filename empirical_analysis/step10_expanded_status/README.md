@@ -91,15 +91,15 @@ reported in the audit.
 
 ## Run
 
-Heavy read (5.4 GB source). On turin003:
+Heavy read (5.4 GB source). From the repository root:
 
 ```
-module load python/3.12.13-aocl5.3
 python -m empirical_analysis.step10_expanded_status.build
 ```
 
-Custom input locations via CLI flags (or env vars `KWR_STEP10_SOURCE`,
-`KWR_POPULATION`, `KWR_STANDALONE`, `KWR_PHRASES`, `KWR_OUT_DIR`):
+Every input is overridable via CLI flags (highest priority) or the matching env vars
+(`KWR_STEP10_SOURCE`, `KWR_POPULATION`, `KWR_STANDALONE`, `KWR_PHRASES`,
+`KWR_OUT_DIR`); no flags are required, and any subset can be overridden:
 
 ```
 python -m empirical_analysis.step10_expanded_status.build \
