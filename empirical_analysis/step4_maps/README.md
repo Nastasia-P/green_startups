@@ -105,7 +105,15 @@ python -m empirical_analysis.step4_maps.run --verbose
 ## Dependencies
 
 `geopandas`, `mapclassify`, `matplotlib` (see `empirical_analysis/requirements.txt`);
-geopandas pulls in `shapely`, `pyproj` and `pyogrio`.
+geopandas pulls in `shapely`, `pyproj` and `pyogrio`. Install with:
+
+```bash
+# install everything (base pipeline + mapping deps)
+pip install -r empirical_analysis/requirements.txt
+
+# or just the mapping deps for this module
+pip install "geopandas>=1.0" "mapclassify>=2.6" "matplotlib>=3.8"
+```
 
 ## Tests
 

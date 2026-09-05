@@ -645,6 +645,18 @@ All maps share one colour scheme (`viridis`) on the equal-area European projecti
 line on the colorbar. Geometry is clipped to a European window so overseas territories
 do not distort the frame.
 
+This module needs three extra packages beyond the base pipeline (`geopandas`,
+`mapclassify`, `matplotlib`; geopandas pulls in `shapely`, `pyproj`, `pyogrio`). They
+are pinned in [`requirements.txt`](requirements.txt):
+
+```bash
+# install everything (base + mapping deps)
+pip install -r empirical_analysis/requirements.txt
+
+# or just the mapping deps
+pip install "geopandas>=1.0" "mapclassify>=2.6" "matplotlib>=3.8"
+```
+
 ```bash
 # render the five maps (the geometry is already committed, so this is all you need)
 python -m empirical_analysis.step4_maps.run
