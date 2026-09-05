@@ -20,6 +20,13 @@ step maps to the thesis output register.
 | 6 | `step6_investors` | investor & grant tables (T4.18-T4.19, T4.21-T4.23, T4.25, F4.5) | done |
 | 7 | `step7_geo_finance` | geography x finance (T4.26, T4.28, T4.29, F-data) + by-country comparison of all Step 5/6 tables | done |
 | 8 | `step8_verify` | cross-table reconciliation (`step8_reconciliation.csv`) | done |
+| 9 | `step9_keyword_recovery` | keyword-recovery robustness diagnostic (`keyword_recovery_*`, `T_keyword_recovery_*`) | done (supplementary) |
+| 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
+
+Steps 9 and 10 are **supplementary, strictly read-only** exercises requested by the
+supervisor. They add nothing to the core pipeline (they never modify
+`company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
+only read prior outputs and write their own new files.
 
 ## Prerequisites
 
@@ -524,6 +531,92 @@ PASS/WARN/FAIL summary and every non-PASS line; `--strict` exits non-zero on any
 Deferred (see spec §8): the end-to-end trace of ~10 firms (5.3) and the Stage 2+3 re-run
 of headline results (5.6, already carried by the R1 columns on the Step 3-7 tables).
 
+## Step 9 — Keyword-recovery robustness (supplementary, read-only)
+
+Answers the supervisor's convergent-validity question: of the 6,636 firms flagged
+green *only* via PitchBook's CleanTech / Climate Tech verticals (Stage 1), how many
+can be independently recovered by applying the thesis's own environmental vocabulary
+(standalone tokens + multi-word phrases) to the `Keywords` and `Description` text
+alone? It applies **only** the Stage 2 token and Stage 3 phrase rules (imported
+unchanged from `classify_startups_green_strong_terms.py`) to all 116,005 firms; the
+vertical stage is never used as a search signal (only to split Stage-1 firms into
+CleanTech-only / Climate-Tech-only / both cohorts). Full module docs:
+[`step9_keyword_recovery/README.md`](step9_keyword_recovery/README.md).
+
+Reads the canonical baseline `population_key.parquet` (labels are never modified),
+joins text from `startups_stages_filtered.csv`, and uses the on-disk vocabulary
+(68 tokens / 456 phrases; the thesis quotes 64/458, reconciled in the audit).
+
+```bash
+python -m empirical_analysis.step9_keyword_recovery.build
+```
+
+Every input is overridable via CLI flags (or env vars `KWR_POPULATION`, `KWR_SPINE`,
+`KWR_STANDALONE`, `KWR_PHRASES`, `KWR_OUT_DIR`); no flags are required.
+
+What to expect (in `data/outputs/chapter4/`):
+
+| File | Contents |
+|---|---|
+| `keyword_recovery_firm_level.parquet` | 116,005 rows: baseline labels + per-firm diagnostics (`text_match_standalone/_mwe/_any`, `n_standalone`, `n_mwe`, matched terms, `is_stage1`, `vertical_cohort`) |
+| `T_keyword_recovery_stage1.csv` | headline recovery of the 6,636 Stage-1 firms (by standalone, MWE, either, both, neither) |
+| `T_keyword_recovery_by_vertical.csv` | same metrics split by CleanTech-only / Climate-Tech-only / both (cohorts sum to 6,636) |
+| `keyword_recovery_reconciliation.csv` | population/stage counts, vocab sizes, text-join coverage, no-vertical-term guard, dual-use sensitivity, read-only assertion |
+| `step9_keyword_recovery_report.txt` | the module's own human-readable report |
+
+Headline: 2,914 of the 6,636 Stage-1 firms (43.9%) are recovered by text alone. The
+56.1% "miss" is a deliberate precision property of the vocabulary (broad umbrella
+terms like `carbon`, `renewable`, `energy`, `climate` are not standalone tokens),
+not a recall failure. **Interpretation boundary:** this is a convergent-validity
+check, not an estimate of classifier recall, and not a new green definition.
+
+## Step 10 — Expanded start-up-status population (supplementary, read-only)
+
+Addresses the survivor-bias concern: the 2026 baseline observes only firms that
+*still* satisfy the start-up definition, not the firms that "were a start-up and are
+not anymore" (died, acquired/merged, went public). Step 10 rebuilds a broader
+observable population from the raw source `Company_Europe.csv`, keeping the baseline's
+Europe + valid-year + **age<=10** criterion but dropping the current-ownership and
+operating-status restrictions and broadening the Universe rule (admits M&A / Publicly
+Listed; excludes only `Other Private Companies`). Full module docs:
+[`step10_expanded_status/README.md`](step10_expanded_status/README.md).
+
+Population flow: 6,453,656 raw -> 2,702,220 age-filtered -> **152,310 expanded**;
+the 116,005 baseline is a strict subset, so **36,305 are outside** it. Every firm
+gets a traceable reason for baseline membership/non-membership (`fails_ownership` /
+`fails_universe` / `fails_alive`, raw status flags, and a grouped
+`baseline_exclusion_group`). Green labels are **hybrid**: canonical
+`population_key.parquet` labels for baseline firms (so the baseline reconciles to
+8,306 green), freshly-applied classifier labels for the outside firms.
+
+```bash
+# heavy read of the 5.4 GB source; run on the analysis node
+module load python/3.12.13-aocl5.3
+python -m empirical_analysis.step10_expanded_status.build
+```
+
+Inputs overridable via CLI flags (or env vars `KWR_STEP10_SOURCE`, `KWR_POPULATION`,
+`KWR_STANDALONE`, `KWR_PHRASES`, `KWR_OUT_DIR`).
+
+What to expect (in `data/outputs/chapter4/`):
+
+| File | Contents |
+|---|---|
+| `step10_expanded_population.parquet` | 152,310 rows: raw current-status fields, green classification, baseline-membership/exclusion flags |
+| `T_status_population_flow.csv` | expanded -> baseline vs outside, then the outside groups; total/green/other/green-share |
+| `T_status_outcomes_green_vs_other.csv` | membership + exit-group composition, green vs other, incl. share of each cohort still in the baseline |
+| `T_status_exclusion_green_vs_other.csv` | outside-baseline firms only: green vs other across each exclusion criterion (filters, raw flags, groups) |
+| `T_status_outcomes_by_cohort.csv` | the same status composition by founding cohort (controls for green firms being older) |
+| `step10_universe_diagnostics.csv` | raw Universe/Ownership/Business value counts on the age-filtered population (Other Private Companies flagged) |
+| `step10_audit.csv` | reconciliations (2,702,220 / 152,310 / 116,005 / 8,306), duplicate checks, read-only assertion |
+| `step10_expanded_status_report.txt` | the module's own human-readable report |
+
+Headline: only 68.9% of green firms in the expanded cohort are still in the 2026
+baseline vs 76.8% of other firms — green firms are disproportionately among the
+exited/non-operating. **Interpretation boundary:** this is a current-snapshot
+(7 Jul 2026 extract) status composition, not a survival panel; avoid longitudinal
+"survival/failure rate" language or causal claims about green vs other survival.
+
 ## Acceptance anchors
 
 A correct full run reproduces:
@@ -543,7 +636,9 @@ python -m pytest empirical_analysis/ -q
 
 | Path | Contents |
 |---|---|
+| `Company_Europe.csv` | raw European PitchBook export, 6,453,656 firms (Step 10 source) |
 | `startups_stages_filtered.csv` | company spine, 94 columns, 116,005 firms |
 | `data/outputs/startup_population_green_classification_strong_terms.csv` | green ledger |
 | `data/outputs/clean_tables/` | Step 1 output |
 | `data/outputs/company_analysis.parquet` | Step 2 output |
+| `data/outputs/chapter4/` | Step 3-10 tables and figure data (incl. Step 9/10 outputs) |
