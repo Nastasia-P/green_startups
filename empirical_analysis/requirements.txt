@@ -7,3 +7,5 @@ pytest>=8.0
 geopandas>=1.0
 mapclassify>=2.6
 matplotlib>=3.8
+# Step 13 exploratory regression: OLS with robust SE, fixed effects
+statsmodels>=0.14

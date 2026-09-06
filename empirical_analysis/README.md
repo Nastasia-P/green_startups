@@ -24,14 +24,17 @@ step maps to the thesis output register.
 | 9 | `step9_keyword_recovery` | keyword-recovery robustness diagnostic (`keyword_recovery_*`, `T_keyword_recovery_*`) | done (supplementary) |
 | 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
 | 11 | `step4_maps` | five European choropleth maps of the Step 4 outputs (`F4_M1`-`F4_M5`, PNG + PDF) | done (supplementary) |
+| 13 | `step13_regression` | exploratory composition-adjusted regressions (`T_regression_*`, `step13_regression_sample_audit`, `captions_step13`) | done (supplementary) |
 
-Step 5b, Steps 9, 10 and the map set (`step4_maps`) are **supplementary, strictly
+Step 5b, Steps 9, 10, 13 and the map set (`step4_maps`) are **supplementary, strictly
 read-only** exercises. They add nothing to the core pipeline (they never modify
 `company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
 only read prior outputs and write their own new files (distinct filenames).
 `step5b_fixed_horizon` reuses the baseline green labels and deal grain and writes only
-its own `T_first5_*` / `captions_first5` / `F_first5_*` files; `step4_maps` reads the
-Step 4 CSVs and only renders images — it computes no new measure.
+its own `T_first5_*` / `captions_first5` / `F_first5_*` files; `step13_regression`
+reuses those same inputs (plus step5b) and writes only its own `T_regression_*` /
+`step13_*` / `captions_step13` files; `step4_maps` reads the Step 4 CSVs and only
+renders images — it computes no new measure.
 
 ## Prerequisites
 
@@ -750,6 +753,59 @@ What to expect (in `data/outputs/chapter4/maps/`):
 | `F4_M5_green_lq.{png,pdf}` | green-start-up location quotient (benchmark LQ = 1) |
 | `maps_manifest.csv` | one row per map (source file/column, value range, output files) |
 | `maps_report.txt` | crosswalk validation (46 countries) and per-map highest/lowest |
+
+## Step 13 — Exploratory regression analysis (supplementary, read-only)
+
+Checks whether the core financing differences survive **adjusting for observable
+composition** — the supervisor's concern that raw green-vs-other gaps may reflect
+green firms differing in founding cohort, country and industry rather than green
+status itself. It runs a small set of sequential OLS regressions and reports how the
+green coefficient moves as controls are added:
+
+```
+M0: outcome ~ green   ->   M1: + cohort   ->   M2: + country FE   ->   M3: + industry FE
+```
+
+Every green coefficient is a **conditional association, not a causal effect**. Three
+model families are estimated: (1) binary financing **access** (`any_financing`=
+`financed`, `any_vc`, `any_grant`, `any_accelerator`) as a **linear probability model
+(OLS)** over the full 116,005 population; (2) financing **timing** (`first_funding_lag`,
+`first_vc_lag`) over firms with the lag observed; (3) first-five-year **capital**
+(`log(1 + disclosed in-window deal_size)`, reusing `step5b_fixed_horizon`) over
+step5b-eligible firms with a disclosed amount. Standard errors are HC1 robust; missing
+amounts are never zero-filled. Binary outcomes use a LPM by design — logistic
+regression is flagged as an alternative methodological decision but is **not** run.
+Full module docs: [`step13_regression/README.md`](step13_regression/README.md).
+
+Needs `statsmodels` (pinned in [`requirements.txt`](requirements.txt)).
+
+```bash
+python -m empirical_analysis.step13_regression.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4 \
+    --industry group
+```
+
+What to expect (in `data/outputs/chapter4/`):
+
+| File | Contents |
+|---|---|
+| `T_regression_financing_access.csv` | family 1: LPM M0-M3 for the four access outcomes |
+| `T_regression_timing.csv` | family 2: OLS M0-M3 for years to first financing / first VC |
+| `T_regression_first5_capital.csv` | family 3: OLS M0-M3 for log(1 + first-five-year disclosed capital) |
+| `step13_regression_sample_audit.csv` | per model: n, n_green, n_other, unique firms, dropped-for-missing, FE level counts, transformation, cov_type |
+| `captions_step13.csv` | estimator choice, the LPM/logistic flag, sample definitions, and the interpretation boundary |
+
+Industry is a single firm-level tag (`primary_industry_group` by default; the
+multi-valued industry membership is never joined in), and rare/missing FE levels fold
+into `Other` so the sample is identical across M0-M3. The run prints the green
+coefficient path and an acceptance report (five checks: full-population access sample;
+all four models with a finite green coefficient; observed-only timing/capital samples
+with matching n; one row per firm; output names disjoint from Step 5/step5b).
+**Interpretation boundary:** conditional associations within the 2026 baseline sample;
+significance is not substantive importance (at n=116,005 tiny effects go significant,
+so magnitude and the CI matter), and this does not address survivor-selection (Step 10).
 
 ## Acceptance anchors
 
