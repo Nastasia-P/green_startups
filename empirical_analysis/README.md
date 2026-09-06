@@ -17,6 +17,7 @@ step maps to the thesis output register.
 | 3 | `step3_firm_characteristics` | firm-characteristic tables (T4.1-T4.5, F4.1) + sample register | done |
 | 4 | `step4_geography` | geography tables (T4.6-T4.8, AP2, F4.2, F4.3) | done |
 | 5 | `step5_funding` | funding tables (T4.9-T4.17 incl. T4.12, F4.4) | done |
+| 5b | `step5b_fixed_horizon` | fixed five-year financing horizon (`T_first5_*`, `captions_first5`, `F_first5_access`) | done (supplementary) |
 | 6 | `step6_investors` | investor & grant tables (T4.18-T4.19, T4.21-T4.23, T4.25, F4.5) | done |
 | 7 | `step7_geo_finance` | geography x finance (T4.26, T4.28, T4.29, F-data) + by-country comparison of all Step 5/6 tables | done |
 | 8 | `step8_verify` | cross-table reconciliation (`step8_reconciliation.csv`) | done |
@@ -24,11 +25,13 @@ step maps to the thesis output register.
 | 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
 | 11 | `step4_maps` | five European choropleth maps of the Step 4 outputs (`F4_M1`-`F4_M5`, PNG + PDF) | done (supplementary) |
 
-Steps 9, 10 and the map set (`step4_maps`) are **supplementary, strictly read-only**
-exercises. They add nothing to the core pipeline (they never modify
+Step 5b, Steps 9, 10 and the map set (`step4_maps`) are **supplementary, strictly
+read-only** exercises. They add nothing to the core pipeline (they never modify
 `company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
-only read prior outputs and write their own new files. `step4_maps` reads the Step 4
-CSVs and only renders images — it computes no new measure.
+only read prior outputs and write their own new files (distinct filenames).
+`step5b_fixed_horizon` reuses the baseline green labels and deal grain and writes only
+its own `T_first5_*` / `captions_first5` / `F_first5_*` files; `step4_maps` reads the
+Step 4 CSVs and only renders images — it computes no new measure.
 
 ## Prerequisites
 
@@ -332,6 +335,63 @@ Confidence summary: **access and stage composition are high-confidence** (flags 
 stage are fully populated); **amounts are medium** and only ever compared within the
 financed subsample; **post-money valuation (T4.12) is the weakest table** at ~25%
 coverage and is read with caution.
+
+## Step 5b — Fixed five-year financing horizon (supplementary, read-only)
+
+A self-contained extension of Step 5 that standardises the financing observation
+window to each firm's **first five post-founding years**, so green and other
+start-ups are compared at the same stage of firm life rather than over unequal
+calendar exposures. It reuses the baseline green labels and the deal grain verbatim
+and never rewrites any Step 5/6 table.
+
+**Eligibility (avoid right-censoring).** Founding is year-only and the extract date is
+2026-07-07, so the window `[year_founded, year_founded+5]` is only guaranteed complete
+when `year_founded + 5 <= 2025`. Combined with the population's 10-year floor
+(`year_founded >= 2016`), the headline eligible set is **`year_founded` in 2016-2020**;
+firms with missing/other founding years are excluded from the headline and counted
+separately. A deal is in-window iff `year_founded <= deal_year <= year_founded + 5`
+(deal-level records, never the `total_raised` scalar); deals dated before founding
+(`deal_year < year_founded`) are impossible and are flagged, counted and excluded.
+
+Reads the Step 2 firm table (`company_analysis.parquet`) plus three Step 1 clean
+tables (`deals_clean`, `deal_investors_clean`, `investors_clean`).
+
+```bash
+# build from the local Step 2 + Step 1 outputs
+python -m empirical_analysis.step5b_fixed_horizon.run \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4
+
+# on the target machine, the OneDrive paths resolve on their own
+python -m empirical_analysis.step5b_fixed_horizon.run
+```
+
+Paths resolve automatically; override if needed:
+
+- firm table: `--firm-table` > `STEP5B_FIRM_TABLE` / `STEP5_FIRM_TABLE` > `data/outputs/company_analysis.parquet`
+- clean tables: `--clean-dir` > `STEP2_CLEAN_DIR` > `data/outputs/clean_tables`
+- output dir: `--output-dir` > `STEP5B_OUTPUT_DIR` / `STEP5_OUTPUT_DIR` > `data/outputs/chapter4`
+
+What to expect (in `data/outputs/chapter4/`):
+
+| File | Contents |
+|---|---|
+| `T_first5_access.csv` | extensive margin within the window (denominator = eligible firms): `any_financing`, `any_vc`, `any_grant`, `any_accelerator`, green vs other, pp difference |
+| `T_first5_timing.csv` | years to the first in-window event (`deal_year - year_founded`) for first financing / VC / grant: median + IQR, over firms that have the event in-window |
+| `T_first5_capital.csv` | per-firm sum of **disclosed** in-window `deal_size` (missing size never zero-filled), Green / Other; median + IQR with firm- and deal-coverage |
+| `T_first5_first_channel.csv` | first in-window deal per firm: `first_stage` composition and `first_backing` (public/private, from `investor_type_grp`) |
+| `captions_first5.csv` | one row per table stating the eligibility rule, totals and coverage, plus the interpretation boundary |
+| `F_first5_access.png` | grouped bars of the four access shares, green vs other |
+
+Every table ends with the uniform `n_green`, `n_others`, `n_startups` trio and every
+share reports its n. The run prints an eligibility summary and an acceptance report
+(five checks: horizon not exceeded; all eligible in 2016-2020; impossible deals counted
+and excluded; output names disjoint from Step 5's; per-row trio reconciliation). A
+correct run shows 31,257 eligible firms and all five checks PASS. **Interpretation
+boundary:** this standardises the financing observation horizon within the existing
+2026 baseline sample; it does not address the separate cross-sectional
+survivor-selection issue (see Step 10) — the two are distinct.
 
 ## Step 6 — Investors and grants
 
