@@ -30,7 +30,7 @@ M3 and M4 are a comparison pair: they separate countries that have many green fi
 because of a generally dense ecosystem (e.g. Norway) from countries that stand out
 specifically in green firms per inhabitant.
 
-**C. Relative green specialisation**
+**C. Relative green representation**
 
 | Map | Question | Source file | Column |
 | --- | --- | --- | --- |
@@ -40,6 +40,17 @@ specifically in green firms per inhabitant.
 Step 4: `LQ = 1` equals the European benchmark, `LQ > 1` is relative over-representation,
 `LQ < 1` is under-representation. No separate "all-start-up LQ" map is produced: the green
 LQ already uses each country's entire start-up population as its denominator.
+
+**Low-n muting (presentation only).** On M5, countries with fewer than 30 identified
+green start-ups (`n_green < 30` in `F4_03_lq_by_country.csv`) are drawn in a muted grey
+and **excluded from the colour-scale domain**, so a tiny-population outlier does not set
+the upper end of the scale (e.g. Andorra's `LQ = 2.793` rests on only 2 green firms;
+without this rule it would define the top colour). This mirrors the `>= 30` threshold
+already used in the Step 4 bar chart. It is strictly a presentation rule: the underlying
+46-country analysis, the CSV, and the manifest/report counts are unchanged; only the M5
+colour scaling and the fill of those countries differ. The muted grey is labelled in the
+map legend, and the manifest records `scale_min`/`scale_max` (the domain actually used)
+and `n_muted_low_n` alongside the true `value_min`/`value_max`.
 
 ## Rendering
 
@@ -55,9 +66,13 @@ LQ already uses each country's entire start-up population as its denominator.
   San Marino 2). Zero values (e.g. countries with no green start-ups) are floored to half
   the smallest positive value so they render at the dark end of the scale. The pair-mates
   share colormap and colorbar style for visual comparison.
-- Map 5: diverging colormap (`RdBu_r`) with `TwoSlopeNorm(vcenter=1.0)`, so the benchmark
-  `LQ = 1` sits at the neutral midpoint (marked with a line on the colorbar); red is
-  over-representation, blue is under-representation.
+- Map 5: shared sequential colormap (`viridis`) on a **linear** scale, with the European
+  benchmark `LQ = 1` marked by a black line on the colorbar. The colour-scale domain is
+  set only by countries with `>= 30` green start-ups (see the low-n muting rule above);
+  countries below that threshold are filled muted grey and labelled in the legend.
+- Maps carry **no on-figure title** (each output file is identified in the manifest and
+  in the Outputs table below), and the footer states only the projection - the data
+  source path/column is intentionally omitted.
 - Borders are thin and white (reference-map style). Micro-states (Andorra, Monaco, San
   Marino, Liechtenstein, Gibraltar, Malta) remain small at Europe scale - this is
   expected. Gibraltar's polygon is only available in the Natural Earth 1:10m layer, so it
@@ -94,13 +109,26 @@ python -m empirical_analysis.step4_maps.run --verbose
 
 ## Outputs (in the output directory)
 
-- `F4_M1_total_startups.{png,pdf}`
-- `F4_M2_green_startups.{png,pdf}`
-- `F4_M3_startups_per_million.{png,pdf}`
-- `F4_M4_green_per_million.{png,pdf}`
-- `F4_M5_green_lq.{png,pdf}`
-- `maps_manifest.csv` - one row per map (source file/column, value range, output files)
-- `maps_report.txt` - crosswalk validation and per-map highest/lowest countries
+Because the maps carry no on-figure title, use this table (and the manifest) to identify
+each file. Every map is written as both `.png` (raster, 200 dpi) and `.pdf` (vector);
+the block letter (A/B/C) is the conceptual grouping above.
+
+| File (`.png` + `.pdf`) | Block | Shows | Source file -> column | Scale |
+| --- | --- | --- | --- | --- |
+| `F4_M1_total_startups` | A | Total start-ups by country (absolute) | `F4_02_green_count_by_country.csv` -> `n_startups` | viridis, log |
+| `F4_M2_green_startups` | A | Green start-ups by country (absolute) | `F4_02_green_count_by_country.csv` -> `n_green` | viridis, log |
+| `F4_M3_startups_per_million` | B | Total start-ups per million inhabitants | `T4_07_per_capita_crosscheck.csv` -> `startups_per_million` | viridis, log |
+| `F4_M4_green_per_million` | B | Green start-ups per million inhabitants | `T4_07_per_capita_crosscheck.csv` -> `green_per_million` | viridis, log |
+| `F4_M5_green_lq` | C | Green location quotient vs the European benchmark (`LQ = 1`) | `F4_03_lq_by_country.csv` -> `lq` | viridis, linear; low-n (`n_green < 30`) muted grey and de-scaled |
+
+Plus two non-image artifacts:
+
+- `maps_manifest.csv` - one row per map: `map_id`, `title`, `source_file`,
+  `source_column`, `n_countries`, the true `value_min`/`value_max`, the plotted
+  `scale_min`/`scale_max`, `n_muted_low_n` (countries greyed by the M5 low-n rule; 0 for
+  M1-M4), and the `output_png`/`output_pdf` filenames.
+- `maps_report.txt` - crosswalk validation and, per map, the value range, the plotted
+  scale range, any muted countries, and the highest/lowest countries.
 
 ## Dependencies
 

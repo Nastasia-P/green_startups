@@ -696,7 +696,7 @@ exited/non-operating. **Interpretation boundary:** this is a current-snapshot
 Renders the Step 4 geography as five European choropleth maps, grouped into three
 blocks: **A. absolute distribution** (M1 total start-ups, M2 green start-ups),
 **B. population-adjusted density** (M3 start-ups per million, M4 green per million),
-and **C. relative green specialisation** (M5 green location quotient). It reads only
+and **C. relative green representation** (M5 green location quotient). It reads only
 the existing Step 4 CSVs (`F4_02_green_count_by_country.csv`,
 `T4_07_per_capita_crosscheck.csv`, `F4_03_lq_by_country.csv`) plus a committed Natural
 Earth geometry, and computes no new measure. Full module docs:
@@ -705,8 +705,12 @@ Earth geometry, and computes no new measure. Full module docs:
 All maps share one colour scheme (`viridis`) on the equal-area European projection
 (EPSG:3035). M1-M4 use a continuous log colour scale with plain-number colorbars
 (counts/densities are heavily skewed); M5 marks the LQ = 1 European benchmark with a
-line on the colorbar. Geometry is clipped to a European window so overseas territories
-do not distort the frame.
+line on the colorbar. On M5 a **presentation-only low-n rule** greys out and de-scales
+countries with fewer than 30 green start-ups (`n_green < 30`), so a tiny-population
+outlier (e.g. Andorra's LQ on 2 green firms) does not set the scale; the 46-country
+analysis is unchanged. Maps carry no on-figure title (each file is identified in the
+manifest and the module README) and the footer shows only the projection. Geometry is
+clipped to a European window so overseas territories do not distort the frame.
 
 This module needs three extra packages beyond the base pipeline (`geopandas`,
 `mapclassify`, `matplotlib`; geopandas pulls in `shapely`, `pyproj`, `pyogrio`). They
@@ -750,9 +754,9 @@ What to expect (in `data/outputs/chapter4/maps/`):
 | `F4_M2_green_startups.{png,pdf}` | green start-ups by country (`n_green`) |
 | `F4_M3_startups_per_million.{png,pdf}` | start-ups per million inhabitants |
 | `F4_M4_green_per_million.{png,pdf}` | green start-ups per million inhabitants |
-| `F4_M5_green_lq.{png,pdf}` | green-start-up location quotient (benchmark LQ = 1) |
-| `maps_manifest.csv` | one row per map (source file/column, value range, output files) |
-| `maps_report.txt` | crosswalk validation (46 countries) and per-map highest/lowest |
+| `F4_M5_green_lq.{png,pdf}` | green-start-up location quotient (benchmark LQ = 1); countries with `n_green < 30` are muted grey and excluded from the colour scale |
+| `maps_manifest.csv` | one row per map (source file/column, true value range, plotted `scale_min`/`scale_max`, `n_muted_low_n`, output files) |
+| `maps_report.txt` | crosswalk validation (46 countries) and per-map value/scale range, muted countries, and highest/lowest |
 
 ## Step 13 — Exploratory regression analysis (supplementary, read-only)
 
@@ -777,7 +781,16 @@ amounts are never zero-filled. Binary outcomes use a LPM by design — logistic
 regression is flagged as an alternative methodological decision but is **not** run.
 Full module docs: [`step13_regression/README.md`](step13_regression/README.md).
 
-Needs `statsmodels` (pinned in [`requirements.txt`](requirements.txt)).
+This step needs `statsmodels` beyond the base pipeline; it is pinned in
+[`requirements.txt`](requirements.txt):
+
+```bash
+# install everything (base + step 13)
+pip install -r empirical_analysis/requirements.txt
+
+# or just the regression dep
+pip install "statsmodels>=0.14"
+```
 
 ```bash
 python -m empirical_analysis.step13_regression.run \

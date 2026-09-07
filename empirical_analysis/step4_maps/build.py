@@ -22,6 +22,7 @@ matplotlib.use("Agg")  # headless rendering on the HPC node
 import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize
+from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 import pandas as pd
 from shapely.geometry import box
@@ -77,18 +78,28 @@ def load_sources(input_dir: Path | None = None) -> dict[str, pd.DataFrame]:
 # Join
 # ---------------------------------------------------------------------------
 def _attach_value(
-    geom: gpd.GeoDataFrame, df: pd.DataFrame, column: str
+    geom: gpd.GeoDataFrame,
+    df: pd.DataFrame,
+    column: str,
+    extra_columns: list[str] | None = None,
 ) -> gpd.GeoDataFrame:
     """Join ``df[column]`` onto the geometry via country -> ISO2, failing loudly.
 
     Fatal if a data country cannot be mapped to an ISO2 code, or if a data country's
     ISO2 is absent from the geometry. Countries that are in the geometry but absent from
-    this CSV are kept with a NaN value and drawn grey ("no data").
+    this CSV are kept with a NaN value and drawn grey ("no data"). ``extra_columns``
+    (if present in the source) are carried along for presentation rules such as the
+    Map 5 low-n muting; a requested extra column that is absent is silently skipped.
     """
     if column not in df.columns:
         raise KeyError(f"Column {column!r} not found in source (have {list(df.columns)}).")
 
-    work = df[["country", column]].copy()
+    carry = [column]
+    for extra in extra_columns or []:
+        if extra in df.columns and extra not in carry:
+            carry.append(extra)
+
+    work = df[["country", *carry]].copy()
     work["iso2"] = work["country"].map(config.COUNTRY_TO_ISO2)
     unknown = sorted(work.loc[work["iso2"].isna(), "country"].unique())
     if unknown:
@@ -105,7 +116,7 @@ def _attach_value(
         )
 
     merged = geom.merge(
-        work[["iso2", column]], left_on="iso_a2", right_on="iso2", how="left"
+        work[["iso2", *carry]], left_on="iso_a2", right_on="iso2", how="left"
     )
     return merged
 
@@ -125,6 +136,11 @@ class MapResult:
     top: list[tuple[str, float]]
     bottom: list[tuple[str, float]]
     outputs: list[str]
+    # Presentation-only fields (the analysis above is unchanged): the colour-scale
+    # domain actually used, and how many countries were muted by the low-n rule.
+    scale_min: float = float("nan")
+    scale_max: float = float("nan")
+    n_muted: int = 0
 
 
 def _view_bounds(geom: gpd.GeoDataFrame) -> tuple[float, float, float, float]:
@@ -144,13 +160,11 @@ def _style_axes(ax, bounds: tuple[float, float, float, float]) -> None:
 
 
 def _finish(fig, ax, spec: dict) -> None:
-    ax.set_title(
-        f"{spec['title']}\n{spec['block']}",
-        fontsize=13, fontweight="bold", loc="left",
-    )
+    # No on-map title (titles are removed from the plots; each output file is
+    # identified in the README and the manifest instead). The footer states only the
+    # projection -- the data source path/column is intentionally omitted.
     fig.text(
         0.01, 0.01,
-        f"Source: Step 4 output {spec['source_file']} (column '{spec['column']}'). "
         "Projection: ETRS89 / LAEA Europe (EPSG:3035).",
         fontsize=7, color="#555555",
     )
@@ -187,7 +201,7 @@ def _log_ticks(vmin: float, vmax: float) -> list[float]:
     return [vmin] + inner + [vmax]
 
 
-def _render_log(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> None:
+def _render_log(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> dict:
     """Continuous viridis fill on a log scale, with a plain-number colorbar.
 
     Counts and per-capita densities are heavily right-skewed, so a log colour scale keeps
@@ -220,22 +234,45 @@ def _render_log(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> None:
     cbar.set_ticks(_log_ticks(pmin, vmax))
     cbar.ax.yaxis.set_major_formatter(_PLAIN_FMT)
     cbar.minorticks_off()
+    return {"scale_min": pmin, "scale_max": vmax, "n_muted": 0}
 
 
-def _render_lq(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> None:
+def _render_lq(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> dict:
     """Green location quotient on the shared viridis scheme (linear), with the LQ = 1
-    European benchmark marked by a black line on the colorbar."""
+    European benchmark marked by a black line on the colorbar.
+
+    Presentation-only low-n rule: countries with fewer than ``LOW_N_THRESHOLD`` green
+    start-ups (``spec['low_n_column']``) are drawn in a muted grey and excluded from the
+    colour-scale domain, so a tiny-population outlier does not set the upper scale. The
+    analysis is unchanged; only the fill and scaling differ.
+    """
     col = spec["column"]
+    low_col = spec.get("low_n_column")
     valued = merged[merged[col].notna()]
     missing = merged[merged[col].isna()]
-    vmin = float(valued[col].min())
-    vmax = float(valued[col].max())
+
+    # Split the valued countries into the scaled set and the muted (low-n) set.
+    if low_col and low_col in merged.columns:
+        strong_mask = valued[low_col].fillna(0) >= config.LOW_N_THRESHOLD
+        strong = valued[strong_mask]
+        low_n = valued[~strong_mask]
+    else:
+        strong = valued
+        low_n = valued.iloc[0:0]
+
+    # Scale domain comes from the scaled set only (falls back to all if none qualify).
+    scale_src = strong if len(strong) else valued
+    vmin = float(scale_src[col].min())
+    vmax = float(scale_src[col].max())
     norm = Normalize(vmin=vmin, vmax=vmax)
 
     if not missing.empty:
         missing.plot(ax=ax, color=config.MISSING_COLOR,
                      edgecolor=config.EDGE_COLOR, linewidth=config.EDGE_WIDTH)
-    valued.plot(
+    if len(low_n):
+        low_n.plot(ax=ax, color=config.LOW_N_COLOR,
+                   edgecolor=config.EDGE_COLOR, linewidth=config.EDGE_WIDTH)
+    strong.plot(
         ax=ax,
         column=col,
         cmap=config.SEQUENTIAL_CMAP,
@@ -252,6 +289,23 @@ def _render_lq(merged: gpd.GeoDataFrame, spec: dict, bounds, ax, fig) -> None:
     cbar.ax.yaxis.set_major_formatter(_PLAIN_FMT)
     if vmin <= config.LQ_CENTER <= vmax:
         cbar.ax.axhline(config.LQ_CENTER, color="black", linewidth=1.2)
+
+    # Legend so the muted grey is identifiable now that titles are gone.
+    handles = []
+    if len(low_n):
+        handles.append(Patch(
+            facecolor=config.LOW_N_COLOR, edgecolor=config.EDGE_COLOR,
+            label=f"< {config.LOW_N_THRESHOLD} green start-ups (muted, not scaled)",
+        ))
+    if not missing.empty:
+        handles.append(Patch(
+            facecolor=config.MISSING_COLOR, edgecolor=config.EDGE_COLOR,
+            label="no data",
+        ))
+    if handles:
+        ax.legend(handles=handles, loc="upper left", frameon=False, fontsize=9)
+
+    return {"scale_min": vmin, "scale_max": vmax, "n_muted": int(len(low_n))}
 
 
 def _summarise(merged: gpd.GeoDataFrame, spec: dict) -> tuple:
@@ -272,13 +326,14 @@ def render_map(
 ) -> MapResult:
     """Render one map to PNG + PDF and return its summary."""
     df = sources[spec["source_file"]]
-    merged = _attach_value(geom, df, spec["column"])
+    extras = [spec["low_n_column"]] if spec.get("low_n_column") else None
+    merged = _attach_value(geom, df, spec["column"], extra_columns=extras)
 
     fig, ax = plt.subplots(figsize=config.FIG_SIZE)
     if spec["kind"] == "lq":
-        _render_lq(merged, spec, bounds, ax, fig)
+        render_info = _render_lq(merged, spec, bounds, ax, fig)
     else:
-        _render_log(merged, spec, bounds, ax, fig)
+        render_info = _render_log(merged, spec, bounds, ax, fig)
     _finish(fig, ax, spec)
     fig.tight_layout()
 
@@ -292,11 +347,16 @@ def render_map(
 
     n, vmin, vmax, top, bottom = _summarise(merged, spec)
     if config.VERBOSE:
-        print(f"[maps] {spec['id']} {spec['title']}: n={n} min={vmin} max={vmax}")
+        muted = render_info.get("n_muted", 0)
+        print(f"[maps] {spec['id']} {spec['title']}: n={n} min={vmin} max={vmax} "
+              f"scale=[{render_info['scale_min']:.4g}, {render_info['scale_max']:.4g}] "
+              f"muted={muted}")
     return MapResult(
         spec_id=spec["id"], title=spec["title"], source_file=spec["source_file"],
         column=spec["column"], n_countries=n, vmin=vmin, vmax=vmax,
         top=top, bottom=bottom, outputs=outputs,
+        scale_min=render_info["scale_min"], scale_max=render_info["scale_max"],
+        n_muted=render_info["n_muted"],
     )
 
 
@@ -313,6 +373,9 @@ def write_manifest(results: list[MapResult], output_dir: Path) -> Path:
             "n_countries": r.n_countries,
             "value_min": round(r.vmin, 4),
             "value_max": round(r.vmax, 4),
+            "scale_min": round(r.scale_min, 4),
+            "scale_max": round(r.scale_max, 4),
+            "n_muted_low_n": r.n_muted,
             "output_png": next((o for o in r.outputs if o.endswith(".png")), ""),
             "output_pdf": next((o for o in r.outputs if o.endswith(".pdf")), ""),
         }
@@ -337,6 +400,12 @@ def report_lines(results: list[MapResult], n_geometry: int) -> list[str]:
         lines.append(f"    source     : {r.source_file} (column '{r.column}')")
         lines.append(f"    countries  : {r.n_countries}  (all 46 expected)")
         lines.append(f"    value range: {r.vmin:.4g} .. {r.vmax:.4g}")
+        lines.append(f"    scale range: {r.scale_min:.4g} .. {r.scale_max:.4g}")
+        if r.n_muted:
+            lines.append(
+                f"    muted      : {r.n_muted} country(ies) with < "
+                f"{config.LOW_N_THRESHOLD} green start-ups (greyed, excluded from scale)"
+            )
         top = ", ".join(f"{n} ({v:.4g})" for n, v in r.top)
         bot = ", ".join(f"{n} ({v:.4g})" for n, v in reversed(r.bottom))
         lines.append(f"    highest    : {top}")

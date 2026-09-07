@@ -42,6 +42,9 @@ def _synthetic_values() -> pd.DataFrame:
         "country": ["Germany", "France", "Italy", "Spain", "Netherlands"],
         "n_startups": [100, 80, 60, 40, 0],   # includes a 0 to exercise log flooring
         "lq": [0.4, 1.0, 2.5, 0.8, 0.0],
+        # Italy has the highest LQ but only 5 green firms: below the >=30 threshold, so
+        # the Map 5 low-n rule must mute it and drop it from the colour scale.
+        "n_green": [100, 100, 5, 100, 100],
     })
 
 
@@ -97,6 +100,37 @@ def test_lq_norm_centered_on_benchmark():
     norm = TwoSlopeNorm(vmin=0.0, vcenter=config.LQ_CENTER, vmax=2.8)
     assert config.LQ_CENTER == 1.0
     assert norm(config.LQ_CENTER) == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# Map 5 low-n muting (presentation-only): a low-green-count country is greyed
+# and excluded from the colour-scale domain, without changing the analysis.
+# ---------------------------------------------------------------------------
+def test_lq_low_n_country_is_muted_and_descaled(tmp_path):
+    geom = _synthetic_geom()
+    sources = {config.F4_03_FILE: _synthetic_values()}
+    bounds = build._view_bounds(geom)
+    spec = dict(config.MAP_SPECS[4])          # M5 lq (F4_03), has low_n_column=n_green
+
+    res = build.render_map(geom, sources, spec, bounds, tmp_path)
+
+    # Analysis is unchanged: all 5 countries counted, true value range keeps Italy's 2.5.
+    assert res.n_countries == 5
+    assert res.vmax == pytest.approx(2.5)
+    # Presentation: Italy (5 green firms) is muted and the scale tops out at 1.0, not 2.5.
+    assert res.n_muted == 1
+    assert res.scale_max == pytest.approx(1.0)
+
+
+def test_lq_without_low_n_column_mutes_nothing(tmp_path):
+    geom = _synthetic_geom()
+    sources = {config.F4_03_FILE: _synthetic_values().drop(columns=["n_green"])}
+    bounds = build._view_bounds(geom)
+    spec = dict(config.MAP_SPECS[4])
+
+    res = build.render_map(geom, sources, spec, bounds, tmp_path)
+    assert res.n_muted == 0
+    assert res.scale_max == pytest.approx(2.5)   # no muting -> Italy sets the scale
 
 
 # ---------------------------------------------------------------------------

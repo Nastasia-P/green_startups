@@ -123,8 +123,18 @@ DIVERGING_CMAP = "RdBu_r"
 FIG_SIZE = (9.0, 9.5)
 PNG_DPI = 200
 MISSING_COLOR = "#d9d9d9"     # geometry present but no data (grey)
+LOW_N_COLOR = "#bdbdbd"       # value present but too few green firms to scale (muted)
 EDGE_COLOR = "white"          # thin light borders (reference-map style)
 EDGE_WIDTH = 0.25
+
+# --- Low-n presentation rule (Map 5) ---------------------------------------
+# Presentation-only, mirroring the >=30 green threshold used in the Step 4 bar chart:
+# countries with fewer than LOW_N_THRESHOLD identified green start-ups are drawn in a
+# muted grey and are EXCLUDED from the colour-scale domain, so a tiny-population outlier
+# (e.g. Andorra's LQ of 2.793 on only 2 green firms) does not set the upper scale. The
+# underlying 46-country analysis (CSV, manifest counts, report) is unchanged; only the
+# colour scaling and fill are affected.
+LOW_N_THRESHOLD = 30
 # Colorbar ("legend") font sizes.
 CBAR_LABEL_FONTSIZE = 14
 CBAR_TICK_FONTSIZE = 12
@@ -185,7 +195,7 @@ MAP_SPECS = (
     },
     {
         "id": "M5",
-        "block": "C. Relative green specialisation",
+        "block": "C. Relative green representation",
         "title": "Green-start-up location quotient (LQ)",
         "source_file": F4_03_FILE,
         "column": "lq",
@@ -193,6 +203,9 @@ MAP_SPECS = (
         "value_fmt": "{:.3f}",
         "legend_title": "Green LQ (benchmark = 1.0)",
         "output_stem": "F4_M5_green_lq",
+        # Presentation-only low-n muting: grey out and de-scale countries with
+        # fewer than LOW_N_THRESHOLD green start-ups (this column carries the count).
+        "low_n_column": "n_green",
     },
 )
 
