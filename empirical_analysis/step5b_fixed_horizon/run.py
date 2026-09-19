@@ -62,6 +62,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  in-window deals      : {int(diag.get('n_in_window_deals', 0))}")
     print(f"  impossible deals     : {int(diag.get('n_impossible_deals', 0))}")
 
+    print("\n[step5b] canonical five-year dataset")
+    print(f"  {config.FIRM_PANEL}.parquet rows : {len(result.firm_panel)}")
+    if len(result.firm_audit):
+        n_fail = int((~result.firm_audit["pass"]).sum())
+        print(f"  {config.FIRM_AUDIT} checks     : "
+              f"{len(result.firm_audit) - n_fail}/{len(result.firm_audit)} PASS")
+
     print("\n[step5b] acceptance report")
     for line in acceptance_report(result):
         print("  " + line)

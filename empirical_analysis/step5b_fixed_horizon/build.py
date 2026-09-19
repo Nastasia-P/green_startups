@@ -26,6 +26,8 @@ class Step5bResult:
     tables: dict[str, pd.DataFrame] = field(default_factory=dict)
     caption: dict[str, str] = field(default_factory=dict)
     diagnostics: dict[str, object] = field(default_factory=dict)
+    firm_panel: pd.DataFrame = field(default_factory=pd.DataFrame)
+    firm_audit: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 # --------------------------------------------------------------------------
@@ -43,24 +45,24 @@ def _split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def _median(series: pd.Series) -> float:
     s = _num(series).dropna()
-    return round(float(s.median()), 2) if len(s) else float("nan")
+    return round(float(s.median()), config.DECIMALS) if len(s) else float("nan")
 
 
 def _quantile(series: pd.Series, q: float) -> float:
     s = _num(series).dropna()
-    return round(float(s.quantile(q)), 2) if len(s) else float("nan")
+    return round(float(s.quantile(q)), config.DECIMALS) if len(s) else float("nan")
 
 
 def _pp(green_share: float, other_share: float) -> float:
     if pd.isna(green_share) or pd.isna(other_share):
         return float("nan")
-    return round((green_share - other_share) * 100, 1)
+    return round((green_share - other_share) * 100, config.DECIMALS_PP)
 
 
 def _diff(green_val: float, other_val: float) -> float:
     if pd.isna(green_val) or pd.isna(other_val):
         return float("nan")
-    return round(green_val - other_val, 2)
+    return round(green_val - other_val, config.DECIMALS)
 
 
 def _stage_sort(values) -> list:
@@ -204,8 +206,8 @@ def build_access(elig: pd.DataFrame, in_window: pd.DataFrame) -> pd.DataFrame:
         on = int(o_hit.sum())
         rows.append({
             "financing_type": label,
-            "green_pct": round(gs, 4),
-            "other_pct": round(os_, 4),
+            "green_pct": round(gs, config.DECIMALS),
+            "other_pct": round(os_, config.DECIMALS),
             "pp_difference": _pp(gs, os_),
             "n_green": gn,
             "n_others": on,
@@ -285,10 +287,10 @@ def build_capital(elig: pd.DataFrame, in_window: pd.DataFrame) -> pd.DataFrame:
             per_firm = pd.Series(dtype=float)
         n_observed = int(len(per_firm))
         firm_cov = (
-            round(n_observed / n_financed, 4) if n_financed else float("nan")
+            round(n_observed / n_financed, config.DECIMALS) if n_financed else float("nan")
         )
         deal_cov = (
-            round(n_deals_disc / n_deals_iw, 4) if n_deals_iw else float("nan")
+            round(n_deals_disc / n_deals_iw, config.DECIMALS) if n_deals_iw else float("nan")
         )
         return {
             "group": label,
@@ -386,8 +388,8 @@ def build_first_channel(
         rows.append({
             "metric": "first_stage",
             "category": stage,
-            "green_pct": round(gs, 4),
-            "other_pct": round(os_, 4),
+            "green_pct": round(gs, config.DECIMALS),
+            "other_pct": round(os_, config.DECIMALS),
             "pp_difference": _pp(gs, os_),
             "n_green": gn,
             "n_others": on,
@@ -414,12 +416,151 @@ def build_first_channel(
         rows.append({
             "metric": "first_backing",
             "category": cat,
-            "green_pct": round(gs, 4),
-            "other_pct": round(os_, 4),
+            "green_pct": round(gs, config.DECIMALS),
+            "other_pct": round(os_, config.DECIMALS),
             "pp_difference": _pp(gs, os_),
             "n_green": gn,
             "n_others": on,
             "n_startups": gn + on,
+        })
+    return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------
+# first5_analysis: canonical one-row-per-eligible-firm five-year dataset
+# --------------------------------------------------------------------------
+def _lag_series(in_window: pd.DataFrame, mask: pd.Series | None) -> pd.Series:
+    """Per-company minimum in-window ``rel`` (years to first event).
+
+    Returns a float Series indexed by ``company_id``; firms with no such
+    in-window event are simply absent (never zero-filled -- the caller's join
+    leaves them NaN).
+    """
+    grp = _first_rel(in_window, mask)
+    if not len(grp):
+        return pd.Series(dtype=float, name="rel")
+    return grp.set_index("company_id")["rel"].astype(float)
+
+
+def build_firm_panel(
+    elig: pd.DataFrame, in_window: pd.DataFrame, firm: pd.DataFrame
+) -> pd.DataFrame:
+    """Canonical five-year firm-level analysis dataset: one row per eligible firm.
+
+    Carries every ``_5yr`` variable needed by downstream common-horizon
+    regressions (step13_regression) plus the audit fields
+    (``eligible_first5``, ``window_start``, ``window_end``). Timing lags and
+    ``disclosed_capital_5yr`` stay NaN when the underlying event/amount is
+    unobserved in-window -- missing is never converted to zero.
+    """
+    extra_cols = [c for c in ("hq_country", "primary_industry_group") if c in firm.columns]
+    firm_extra = (
+        firm[["company_id", *extra_cols]].drop_duplicates("company_id").set_index("company_id")
+    )
+    panel = elig.join(firm_extra, on="company_id")
+
+    # --- access flags (denominator = eligible; 0 when no in-window deal) ---
+    flags = _firm_stage_flags(elig, in_window).set_index("company_id").rename(columns={
+        "any_financing": "any_financing_5yr",
+        "any_vc": "any_vc_5yr",
+        "any_grant": "any_grant_5yr",
+        "any_accelerator": "any_accelerator_5yr",
+    })
+    flag_cols = ["any_financing_5yr", "any_vc_5yr", "any_grant_5yr", "any_accelerator_5yr"]
+    panel = panel.join(flags[flag_cols], on="company_id")
+    for col in flag_cols:
+        panel[col] = panel[col].fillna(0).astype(int)
+
+    has_deals = in_window is not None and len(in_window) > 0
+
+    # --- deal counts ---------------------------------------------------
+    if has_deals:
+        n_deals = in_window.groupby("company_id").size()
+        disc_iw = in_window[_num(in_window["deal_size"]).notna()]
+        n_deals_disc = disc_iw.groupby("company_id").size()
+    else:
+        n_deals = pd.Series(dtype=int)
+        n_deals_disc = pd.Series(dtype=int)
+    panel = panel.join(n_deals.rename("n_deals_5yr"), on="company_id")
+    panel = panel.join(n_deals_disc.rename("n_deals_with_disclosed_size_5yr"), on="company_id")
+    panel["n_deals_5yr"] = panel["n_deals_5yr"].fillna(0).astype(int)
+    panel["n_deals_with_disclosed_size_5yr"] = (
+        panel["n_deals_with_disclosed_size_5yr"].fillna(0).astype(int)
+    )
+
+    # --- timing lags (NaN when the event never occurs in-window) -------
+    vc_mask = in_window["stage_group"].isin(config.VC_STAGE_GROUPS) if has_deals else None
+    grant_mask = (in_window["stage_group"] == config.GRANT_STAGE_GROUP) if has_deals else None
+    panel = panel.join(_lag_series(in_window, None).rename("first_financing_lag_5yr"), on="company_id")
+    panel = panel.join(_lag_series(in_window, vc_mask).rename("first_vc_lag_5yr"), on="company_id")
+    panel = panel.join(_lag_series(in_window, grant_mask).rename("first_grant_lag_5yr"), on="company_id")
+
+    # --- capital (disclosed in-window amounts only; never zero-filled) --
+    if has_deals:
+        disc = in_window[_num(in_window["deal_size"]).notna()].copy()
+        disc["deal_size"] = _num(disc["deal_size"])
+        cap = disc.groupby("company_id")["deal_size"].sum()
+    else:
+        cap = pd.Series(dtype=float)
+    panel = panel.join(cap.rename("disclosed_capital_5yr"), on="company_id")
+    panel["has_disclosed_capital_5yr"] = panel["disclosed_capital_5yr"].notna().astype(int)
+
+    # --- audit fields: eligibility flag + explicit window bounds -------
+    panel["eligible_first5"] = 1
+    panel["window_start"] = _num(panel["year_founded"]).astype("Int64")
+    panel["window_end"] = (_num(panel["year_founded"]) + config.WINDOW_YEARS).astype("Int64")
+
+    cols = [
+        "company_id", "green", "year_founded", "cohort", "hq_country",
+        "primary_industry_group",
+        "any_financing_5yr", "any_vc_5yr", "any_grant_5yr", "any_accelerator_5yr",
+        "n_deals_5yr", "n_deals_with_disclosed_size_5yr",
+        "first_financing_lag_5yr", "first_vc_lag_5yr", "first_grant_lag_5yr",
+        "disclosed_capital_5yr", "has_disclosed_capital_5yr",
+        "eligible_first5", "window_start", "window_end",
+    ]
+    cols = [c for c in cols if c in panel.columns]
+    return panel[cols].reset_index(drop=True)
+
+
+def build_firm_audit(
+    panel: pd.DataFrame, diag: dict, access: pd.DataFrame
+) -> pd.DataFrame:
+    """Reconciliation audit for ``first5_analysis``: totals, window integrity,
+    excluded pre-founding deals, and exact flag reconciliation to
+    ``T_first5_access.csv``.
+    """
+    g, o = _split(panel)
+    access_idx = access.set_index("financing_type") if len(access) else pd.DataFrame()
+    rows: list[dict] = [
+        {"check": "n_eligible_total", "value": int(len(panel)), "expected": int(diag.get("n_eligible", 0)), "pass": len(panel) == int(diag.get("n_eligible", 0))},
+        {"check": "n_eligible_green", "value": int(len(g)), "expected": None, "pass": True},
+        {"check": "n_eligible_other", "value": int(len(o)), "expected": None, "pass": True},
+        {"check": "max_window_rel_years_leq_5", "value": int(diag.get("max_rel_in_window", 0)), "expected": config.WINDOW_YEARS, "pass": int(diag.get("max_rel_in_window", 0)) <= config.WINDOW_YEARS},
+        {"check": "n_impossible_deals_excluded_before_founding", "value": int(diag.get("n_impossible_deals", 0)), "expected": None, "pass": True},
+        {"check": "n_impossible_firms_with_pre_founding_deal", "value": int(diag.get("n_impossible_firms", 0)), "expected": None, "pass": True},
+        {"check": "deal_year_never_exceeds_year_founded_plus_5", "value": int(diag.get("n_after_horizon_deals", 0)), "expected": None, "pass": True},
+    ]
+
+    flag_map = {
+        "any_financing_5yr": "any_financing", "any_vc_5yr": "any_vc",
+        "any_grant_5yr": "any_grant", "any_accelerator_5yr": "any_accelerator",
+    }
+    for panel_col, access_key in flag_map.items():
+        pg = int((g[panel_col] == 1).sum())
+        po = int((o[panel_col] == 1).sum())
+        if access_key in access_idx.index:
+            ag = int(access_idx.loc[access_key, "n_green"])
+            ao = int(access_idx.loc[access_key, "n_others"])
+        else:
+            ag = ao = None
+        rows.append({
+            "check": f"reconcile_{panel_col}_n_green_to_{config.OUT_ACCESS}",
+            "value": pg, "expected": ag, "pass": (ag is not None and pg == ag),
+        })
+        rows.append({
+            "check": f"reconcile_{panel_col}_n_others_to_{config.OUT_ACCESS}",
+            "value": po, "expected": ao, "pass": (ao is not None and po == ao),
         })
     return pd.DataFrame(rows)
 
@@ -455,6 +596,25 @@ def build_captions(elig: pd.DataFrame, diag: dict, result: Step5bResult) -> pd.D
         f"PUBLIC={sorted(config.PUBLIC_INVESTOR_GRPS)} / "
         f"PRIVATE={sorted(config.PRIVATE_INVESTOR_GRPS)}. Denominator = firms with a "
         f"first in-window deal. Total eligible={n_elig} (green={n_g}, other={n_o})."
+    )
+    cap[config.FIRM_PANEL] = (
+        f"Canonical five-year firm-level analysis dataset: exactly one row per "
+        f"eligible firm ({config.ELIGIBILITY_RULE}); total eligible={n_elig} "
+        f"(green={n_g}, other={n_o}). Carries company_id, green, year_founded, "
+        f"cohort, hq_country, primary_industry_group, the four any_*_5yr access "
+        f"flags, n_deals_5yr, n_deals_with_disclosed_size_5yr, the three "
+        f"first_*_lag_5yr timing lags, disclosed_capital_5yr, "
+        f"has_disclosed_capital_5yr, eligible_first5=1, and window_start/"
+        f"window_end. Missing lags/amounts stay NaN (never zero-filled); this is "
+        f"the single input step13_regression uses for every common-horizon "
+        f"regression."
+    )
+    cap[config.FIRM_AUDIT] = (
+        f"Reconciliation audit for {config.FIRM_PANEL}: total eligible, window "
+        f"integrity (max in-window rel <= {config.WINDOW_YEARS}), pre-founding "
+        f"deals excluded and counted, and each any_*_5yr flag's n_green/n_others "
+        f"reconciled exactly to {config.OUT_ACCESS}.csv. See the 'pass' column "
+        f"for a per-check PASS/FAIL."
     )
     cap["_interpretation"] = (
         "This standardises the financing observation horizon within the existing "
@@ -526,6 +686,10 @@ def build_all(
     result.tables[config.OUT_FIRST_CHANNEL] = build_first_channel(
         in_window, deal_investors, investors
     )
+    result.firm_panel = build_firm_panel(elig, in_window, firm)
+    result.firm_audit = build_firm_audit(
+        result.firm_panel, diag, result.tables[config.OUT_ACCESS]
+    )
     result.diagnostics["_elig"] = elig  # stashed for captions/acceptance
     result.diagnostics["_in_window"] = in_window
     return result
@@ -539,6 +703,16 @@ def write_outputs(result: Step5bResult, output_dir: Path | None = None) -> Path:
         path = out / f"{name}.csv"
         df.to_csv(path, index=False)
         print(f"[step5b] wrote {path}  ({len(df)} rows)")
+
+    if len(result.firm_panel):
+        panel_path = out / f"{config.FIRM_PANEL}.parquet"
+        result.firm_panel.to_parquet(panel_path, index=False)
+        print(f"[step5b] wrote {panel_path}  ({len(result.firm_panel)} rows)")
+
+    if len(result.firm_audit):
+        audit_path = out / f"{config.FIRM_AUDIT}.csv"
+        result.firm_audit.to_csv(audit_path, index=False)
+        print(f"[step5b] wrote {audit_path}  ({len(result.firm_audit)} rows)")
 
     elig = result.diagnostics.get("_elig")
     if elig is not None:
@@ -598,10 +772,14 @@ def acceptance_report(result: Step5bResult) -> list[str]:
     )
 
     # C4: no collision with Step 5 output names.
-    produced = set(result.tables.keys()) | {config.CAPTIONS_FILE, config.FIGURE_ACCESS}
+    produced = set(result.tables.keys()) | {
+        config.CAPTIONS_FILE, config.FIGURE_ACCESS,
+        config.FIRM_PANEL, config.FIRM_AUDIT,
+    }
     collision = produced & config.STEP5_PROTECTED_NAMES
     only_first5 = all(
-        n.startswith("T_first5_") or n in {config.CAPTIONS_FILE, config.FIGURE_ACCESS}
+        n.startswith("T_first5_")
+        or n in {config.CAPTIONS_FILE, config.FIGURE_ACCESS, config.FIRM_PANEL}
         for n in produced
     )
     ok4 = (not collision) and only_first5
@@ -630,5 +808,19 @@ def acceptance_report(result: Step5bResult) -> list[str]:
         f"[C5] per-row n_green+n_others==n_startups: {'PASS' if recon_ok else 'FAIL'}; "
         f"access any_financing n_startups <= eligible ({n_elig}): "
         f"{'PASS' if ceil_ok else 'FAIL'}"
+    )
+
+    # C6: first5_analysis panel is one row per eligible firm and its access
+    # flags reconcile exactly to T_first5_access.csv (audited in firm_audit).
+    panel = result.firm_panel
+    panel_ok = len(panel) == n_elig
+    audit = result.firm_audit
+    audit_ok = bool(len(audit)) and bool(audit["pass"].all())
+    lines.append(
+        f"[C6] first5_analysis rows == eligible ({n_elig}): "
+        f"{'PASS' if panel_ok else 'FAIL'}; T_first5_firm_audit all checks pass: "
+        f"{'PASS' if audit_ok else 'FAIL'}"
+        + ("" if audit_ok else
+           f"  FAILED={audit.loc[~audit['pass'], 'check'].tolist() if len(audit) else []}")
     )
     return lines

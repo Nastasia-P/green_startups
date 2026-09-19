@@ -23,6 +23,8 @@ from empirical_analysis.step5b_fixed_horizon.build import (
     build_access,
     build_capital,
     build_first_channel,
+    build_firm_audit,
+    build_firm_panel,
     build_timing,
     prepare_window,
     write_outputs,
@@ -165,7 +167,90 @@ def test_every_table_has_trio_and_acceptance_passes(tmp_path):
     write_outputs(result, tmp_path)
     produced = {p.stem for p in tmp_path.glob("*.csv")} | {
         p.stem for p in tmp_path.glob("*.png")
-    }
+    } | {p.stem for p in tmp_path.glob("*.parquet")}
     assert produced & config.STEP5_PROTECTED_NAMES == set()
     assert (tmp_path / f"{config.OUT_ACCESS}.csv").exists()
     assert (tmp_path / f"{config.CAPTIONS_FILE}.csv").exists()
+    assert (tmp_path / f"{config.FIRM_PANEL}.parquet").exists()
+    assert (tmp_path / f"{config.FIRM_AUDIT}.csv").exists()
+
+
+# --------------------------------------------------------------------------
+# first5_analysis: canonical one-row-per-eligible-firm dataset + audit
+# --------------------------------------------------------------------------
+def _firm_frame_with_controls() -> pd.DataFrame:
+    firm = _firm_frame()
+    countries = {"G1": "Germany", "G2": "France", "O1": "Spain",
+                 "O2": "Italy", "X1": "Poland"}
+    industries = {"G1": "Energy", "G2": "Energy", "O1": "IT",
+                  "O2": "IT", "X1": "IT"}
+    firm["hq_country"] = firm["company_id"].map(countries)
+    firm["primary_industry_group"] = firm["company_id"].map(industries)
+    return firm
+
+
+def test_firm_panel_one_row_per_eligible_firm_with_controls():
+    firm = _firm_frame_with_controls()
+    elig, iw, _ = prepare_window(firm, _deals_frame())
+    panel = build_firm_panel(elig, iw, firm)
+
+    # exactly the four eligible firms (X1 founded 2021 is excluded)
+    assert set(panel["company_id"]) == {"G1", "G2", "O1", "O2"}
+    assert len(panel) == len(elig) == 4
+    assert (panel["eligible_first5"] == 1).all()
+    assert (panel["window_end"] == panel["window_start"] + config.WINDOW_YEARS).all()
+
+    # controls carried through from the firm table (no fan-out / duplication)
+    row = panel.set_index("company_id")
+    assert row.loc["G1", "hq_country"] == "Germany"
+    assert row.loc["G1", "primary_industry_group"] == "Energy"
+
+
+def test_firm_panel_missing_lags_and_capital_are_nan_not_zero():
+    firm = _firm_frame_with_controls()
+    elig, iw, _ = prepare_window(firm, _deals_frame())
+    panel = build_firm_panel(elig, iw, firm).set_index("company_id")
+
+    # O2 has no deals at all: every _5yr flag/count is 0, but lags/capital are NaN
+    assert panel.loc["O2", "any_financing_5yr"] == 0
+    assert panel.loc["O2", "n_deals_5yr"] == 0
+    assert pd.isna(panel.loc["O2", "first_financing_lag_5yr"])
+    assert pd.isna(panel.loc["O2", "disclosed_capital_5yr"])
+    assert panel.loc["O2", "has_disclosed_capital_5yr"] == 0
+
+    # G2's only in-window deal is undisclosed: financed but capital stays NaN
+    assert panel.loc["G2", "any_financing_5yr"] == 1
+    assert panel.loc["G2", "has_disclosed_capital_5yr"] == 0
+    assert pd.isna(panel.loc["G2", "disclosed_capital_5yr"])
+    assert not pd.isna(panel.loc["G2", "first_financing_lag_5yr"])  # event observed
+
+    # G1 has a disclosed grant of 2.0 in-window (the +6 VC deal is truncated out)
+    assert panel.loc["G1", "disclosed_capital_5yr"] == 2.0
+    assert panel.loc["G1", "has_disclosed_capital_5yr"] == 1
+    assert panel.loc["G1", "first_grant_lag_5yr"] == 1.0
+    assert pd.isna(panel.loc["G1", "first_vc_lag_5yr"])  # only VC deal is out-of-window
+
+
+def test_firm_audit_reconciles_to_access_table_and_passes():
+    firm = _firm_frame_with_controls()
+    elig, iw, diag = prepare_window(firm, _deals_frame())
+    panel = build_firm_panel(elig, iw, firm)
+    access = build_access(elig, iw)
+    audit = build_firm_audit(panel, diag, access)
+
+    assert "pass" in audit.columns
+    assert audit["pass"].all(), audit[~audit["pass"]]
+    # every any_*_5yr flag has a green + other reconciliation row
+    checks = set(audit["check"])
+    assert any(c.startswith("reconcile_any_financing_5yr") for c in checks)
+    assert any(c.startswith("reconcile_any_grant_5yr") for c in checks)
+
+
+def test_build_all_populates_firm_panel_and_audit():
+    result = build_all(
+        _firm_frame_with_controls(), _deals_frame(),
+        _deal_investors_frame(), _investors_frame(),
+    )
+    assert len(result.firm_panel) == int(result.diagnostics["n_eligible"])
+    assert len(result.firm_audit) > 0
+    assert result.firm_audit["pass"].all()

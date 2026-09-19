@@ -90,6 +90,12 @@ PRIVATE_INVESTOR_GRPS = {"Independent VC", "Corporate"}
 # --- Reporting -------------------------------------------------------------
 LOW_N_FLAG = 30
 
+# --- Decimal precision (single tunable source of truth) --------------------
+# Change these two constants to change every rounded number this module
+# writes; nothing else hard-codes a decimal count.
+DECIMALS = 4       # shares, medians/quantiles, coverage, capital sums
+DECIMALS_PP = 2    # values already expressed in percentage points (pp_difference)
+
 # --- Output filenames (distinct from Step 5/6; never collide) --------------
 OUT_ACCESS = "T_first5_access"
 OUT_TIMING = "T_first5_timing"
@@ -97,6 +103,12 @@ OUT_CAPITAL = "T_first5_capital"
 OUT_FIRST_CHANNEL = "T_first5_first_channel"
 CAPTIONS_FILE = "captions_first5"
 FIGURE_ACCESS = "F_first5_access"
+
+# Canonical one-row-per-eligible-firm five-year analysis dataset (Parquet)
+# and its reconciliation audit (CSV). Consumed downstream by step13_regression
+# so every common-horizon regression uses exactly this dataset.
+FIRM_PANEL = "first5_analysis"
+FIRM_AUDIT = "T_first5_firm_audit"
 
 # Existing Step 5 output names that must never be produced here (acceptance C4).
 STEP5_PROTECTED_NAMES = {

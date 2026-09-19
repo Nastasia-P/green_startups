@@ -17,24 +17,25 @@ step maps to the thesis output register.
 | 3 | `step3_firm_characteristics` | firm-characteristic tables (T4.1-T4.5, F4.1) + sample register | done |
 | 4 | `step4_geography` | geography tables (T4.6-T4.8, AP2, F4.2, F4.3) | done |
 | 5 | `step5_funding` | funding tables (T4.9-T4.17 incl. T4.12, F4.4) | done |
-| 5b | `step5b_fixed_horizon` | fixed five-year financing horizon (`T_first5_*`, `captions_first5`, `F_first5_access`) | done (supplementary) |
+| 5b | `step5b_fixed_horizon` | fixed five-year financing horizon (`T_first5_*`, `first5_analysis.parquet`, `captions_first5`, `F_first5_access`) | done (supplementary) |
 | 6 | `step6_investors` | investor & grant tables (T4.18-T4.19, T4.21-T4.23, T4.25, F4.5) | done |
 | 7 | `step7_geo_finance` | geography x finance (T4.26, T4.28, T4.29, F-data) + by-country comparison of all Step 5/6 tables | done |
 | 8 | `step8_verify` | cross-table reconciliation (`step8_reconciliation.csv`) | done |
 | 9 | `step9_keyword_recovery` | keyword-recovery robustness diagnostic (`keyword_recovery_*`, `T_keyword_recovery_*`) | done (supplementary) |
 | 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
 | 11 | `step4_maps` | five European choropleth maps of the Step 4 outputs (`F4_M1`-`F4_M5`, PNG + PDF) | done (supplementary) |
-| 13 | `step13_regression` | exploratory composition-adjusted regressions (`T_regression_*`, `step13_regression_sample_audit`, `captions_step13`) | done (supplementary) |
+| 13 | `step13_regression` | common-horizon financing/timing/capital regressions (`T_regression_*_5yr`, `capital_coverage_diagnostic`, `step13_regression_sample_audit`, `captions_step13`) | done (supplementary) |
 
 Step 5b, Steps 9, 10, 13 and the map set (`step4_maps`) are **supplementary, strictly
 read-only** exercises. They add nothing to the core pipeline (they never modify
 `company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
 only read prior outputs and write their own new files (distinct filenames).
 `step5b_fixed_horizon` reuses the baseline green labels and deal grain and writes only
-its own `T_first5_*` / `captions_first5` / `F_first5_*` files; `step13_regression`
-reuses those same inputs (plus step5b) and writes only its own `T_regression_*` /
-`step13_*` / `captions_step13` files; `step4_maps` reads the Step 4 CSVs and only
-renders images — it computes no new measure.
+its own `T_first5_*` / `first5_analysis.parquet` / `T_first5_firm_audit` /
+`captions_first5` / `F_first5_*` files; `step13_regression` reads only
+`first5_analysis.parquet` (Step 5b) and writes only its own `T_regression_*_5yr` /
+`capital_coverage_diagnostic` / `step13_*` / `captions_step13` files; `step4_maps`
+reads the Step 4 CSVs and only renders images — it computes no new measure.
 
 ## Prerequisites
 
@@ -384,17 +385,22 @@ What to expect (in `data/outputs/chapter4/`):
 | `T_first5_timing.csv` | years to the first in-window event (`deal_year - year_founded`) for first financing / VC / grant: median + IQR, over firms that have the event in-window |
 | `T_first5_capital.csv` | per-firm sum of **disclosed** in-window `deal_size` (missing size never zero-filled), Green / Other; median + IQR with firm- and deal-coverage |
 | `T_first5_first_channel.csv` | first in-window deal per firm: `first_stage` composition and `first_backing` (public/private, from `investor_type_grp`) |
+| `first5_analysis.parquet` | **canonical five-year firm-level analysis dataset**: one row per eligible firm (31,257), carrying `company_id`, `green`, `year_founded`, `cohort`, `hq_country`, `primary_industry_group`, the four `any_*_5yr` access flags, `n_deals_5yr`, `n_deals_with_disclosed_size_5yr`, the three `first_*_lag_5yr` timing lags, `disclosed_capital_5yr`, `has_disclosed_capital_5yr`, `eligible_first5=1`, and `window_start`/`window_end`. Missing lags/amounts stay `NaN` (never zero-filled). `step13_regression` uses this file for every common-horizon regression. |
+| `T_first5_firm_audit.csv` | reconciliation audit for `first5_analysis`: total eligible (31,257 = 4,335 green + 26,922 other), window integrity (max in-window `rel` <= 5), pre-founding deals excluded and counted, and each `any_*_5yr` flag reconciled exactly to `T_first5_access.csv` |
 | `captions_first5.csv` | one row per table stating the eligibility rule, totals and coverage, plus the interpretation boundary |
 | `F_first5_access.png` | grouped bars of the four access shares, green vs other |
 
 Every table ends with the uniform `n_green`, `n_others`, `n_startups` trio and every
-share reports its n. The run prints an eligibility summary and an acceptance report
-(five checks: horizon not exceeded; all eligible in 2016-2020; impossible deals counted
-and excluded; output names disjoint from Step 5's; per-row trio reconciliation). A
-correct run shows 31,257 eligible firms and all five checks PASS. **Interpretation
-boundary:** this standardises the financing observation horizon within the existing
-2026 baseline sample; it does not address the separate cross-sectional
-survivor-selection issue (see Step 10) — the two are distinct.
+share reports its n. The run prints an eligibility summary, the `first5_analysis` row
+count, and an acceptance report (six checks: horizon not exceeded; all eligible in
+2016-2020; impossible deals counted and excluded; output names disjoint from Step 5's;
+per-row trio reconciliation; `first5_analysis` is one row per eligible firm and its
+access flags reconcile exactly to `T_first5_access.csv`, audited in
+`T_first5_firm_audit.csv`). A correct run shows 31,257 eligible firms (4,335 green,
+26,922 other) and all six checks PASS. **Interpretation boundary:** this standardises
+the financing observation horizon within the existing 2026 baseline sample; it does not
+address the separate cross-sectional survivor-selection issue (see Step 10) — the two
+are distinct.
 
 ## Step 6 — Investors and grants
 
@@ -758,27 +764,43 @@ What to expect (in `data/outputs/chapter4/maps/`):
 | `maps_manifest.csv` | one row per map (source file/column, true value range, plotted `scale_min`/`scale_max`, `n_muted_low_n`, output files) |
 | `maps_report.txt` | crosswalk validation (46 countries) and per-map value/scale range, muted countries, and highest/lowest |
 
-## Step 13 — Exploratory regression analysis (supplementary, read-only)
+## Step 13 — Common-horizon regression analysis (supplementary, read-only)
 
 Checks whether the core financing differences survive **adjusting for observable
 composition** — the supervisor's concern that raw green-vs-other gaps may reflect
 green firms differing in founding cohort, country and industry rather than green
-status itself. It runs a small set of sequential OLS regressions and reports how the
-green coefficient moves as controls are added:
+status itself. Every primary regression here is estimated on the **Step 5b
+common-horizon dataset** (`first5_analysis.parquet`, 31,257 firms with a complete
+five-year window) rather than the lifetime/full-population columns, so every
+association reported refers to the same observation framework as Section 4.3. It
+runs a small set of sequential OLS regressions and reports how the green
+coefficient moves as controls are added:
 
 ```
-M0: outcome ~ green   ->   M1: + cohort   ->   M2: + country FE   ->   M3: + industry FE
+(1) outcome ~ green   ->   (2) + cohort   ->   (3) + country FE   ->   (4) + industry FE
 ```
 
-Every green coefficient is a **conditional association, not a causal effect**. Three
-model families are estimated: (1) binary financing **access** (`any_financing`=
-`financed`, `any_vc`, `any_grant`, `any_accelerator`) as a **linear probability model
-(OLS)** over the full 116,005 population; (2) financing **timing** (`first_funding_lag`,
-`first_vc_lag`) over firms with the lag observed; (3) first-five-year **capital**
-(`log(1 + disclosed in-window deal_size)`, reusing `step5b_fixed_horizon`) over
-step5b-eligible firms with a disclosed amount. Standard errors are HC1 robust; missing
+(Internally these are `spec1`-`spec4`; no thesis-facing output is ever named
+`M0`-`M3`.) Every green coefficient is a **conditional association, not a causal
+effect**. Three model families are estimated, all over the 31,257 common-horizon
+eligible firms: (1) binary financing **access** (`any_financing_5yr`, `any_vc_5yr`,
+`any_grant_5yr`, `any_accelerator_5yr`) as a **linear probability model (OLS)** over
+every eligible firm; (2) financing **timing** (`first_financing_lag_5yr`,
+`first_vc_lag_5yr`, supplementary) over eligible firms that experience the event
+within their five-year window; (3) **intensive-margin capital**
+(`log(1 + disclosed_capital_5yr)`) over eligible firms with a disclosed in-window
+amount only (18,064 of 31,257) — this estimates *how much* among disclosed
+recipients, not *how many* firms raise anything (the extensive margin is the access
+family); a `capital_coverage_diagnostic.csv` reports the disclosure rate explicitly
+as a coverage diagnostic, not capital access. Standard errors are HC1 robust; missing
 amounts are never zero-filled. Binary outcomes use a LPM by design — logistic
 regression is flagged as an alternative methodological decision but is **not** run.
+Binary-outcome coefficients/SEs are stored raw (0-1) and duplicated as
+percentage-point display columns (`coef_pp`/`se_pp`); significance stars are
+generated from the stored p-value via one rule (`* p<.10, ** p<.05, *** p<.01`),
+never hard-coded. **No formatted/LaTeX tables are produced** — only machine-readable
+CSVs carrying every number needed to typeset a thesis table later. Decimal precision
+is one tunable policy (`config.DECIMALS` / `config.DECIMALS_PP`).
 Full module docs: [`step13_regression/README.md`](step13_regression/README.md).
 
 This step needs `statsmodels` beyond the base pipeline; it is pinned in
@@ -793,9 +815,11 @@ pip install "statsmodels>=0.14"
 ```
 
 ```bash
+# Step 5b must run first to produce first5_analysis.parquet
+python -m empirical_analysis.step5b_fixed_horizon.run
+
 python -m empirical_analysis.step13_regression.run \
-    --firm-table data/outputs/company_analysis.parquet \
-    --clean-dir data/outputs/clean_tables \
+    --firm-panel data/outputs/chapter4/first5_analysis.parquet \
     --output-dir data/outputs/chapter4 \
     --industry group
 ```
@@ -804,21 +828,25 @@ What to expect (in `data/outputs/chapter4/`):
 
 | File | Contents |
 |---|---|
-| `T_regression_financing_access.csv` | family 1: LPM M0-M3 for the four access outcomes |
-| `T_regression_timing.csv` | family 2: OLS M0-M3 for years to first financing / first VC |
-| `T_regression_first5_capital.csv` | family 3: OLS M0-M3 for log(1 + first-five-year disclosed capital) |
-| `step13_regression_sample_audit.csv` | per model: n, n_green, n_other, unique firms, dropped-for-missing, FE level counts, transformation, cov_type |
-| `captions_step13.csv` | estimator choice, the LPM/logistic flag, sample definitions, and the interpretation boundary |
+| `T_regression_access_5yr.csv` | family 1: LPM (1)-(4) for the four common-horizon access outcomes (n=31,257 on every spec) |
+| `T_regression_timing_5yr.csv` | family 2 (supplementary): OLS (1)-(4) for years to first financing / first VC, conditional on the in-window event |
+| `T_regression_capital_5yr.csv` | family 3 (intensive margin): OLS (1)-(4) for log(1 + disclosed in-window capital), disclosed-amount firms only |
+| `capital_coverage_diagnostic.csv` | disclosure/coverage diagnostic: eligible firms, firms with a disclosed amount (overall + green/other), coverage rates, n excluded |
+| `step13_regression_sample_audit.csv` | per spec: n, n_green, n_other, unique firms, dropped-for-missing, FE level counts, transformation, cov_type |
+| `captions_step13.csv` | estimator choice, sample definitions, the star rule, the decimal-precision policy, and the interpretation boundary |
 
 Industry is a single firm-level tag (`primary_industry_group` by default; the
 multi-valued industry membership is never joined in), and rare/missing FE levels fold
-into `Other` so the sample is identical across M0-M3. The run prints the green
-coefficient path and an acceptance report (five checks: full-population access sample;
-all four models with a finite green coefficient; observed-only timing/capital samples
-with matching n; one row per firm; output names disjoint from Step 5/step5b).
-**Interpretation boundary:** conditional associations within the 2026 baseline sample;
-significance is not substantive importance (at n=116,005 tiny effects go significant,
-so magnitude and the CI matter), and this does not address survivor-selection (Step 10).
+into `Other` so the sample is identical across (1)-(4). The run prints the green
+coefficient path and an acceptance report (seven checks: common-horizon access sample
+(n=31,257) on every spec; all four specs with finite coefficients and `(1)`-`(4)`
+column labels only; observed-only timing/capital samples with matching n (capital
+never zero-filled); one row per firm; output names disjoint from Step 5/step5b;
+percentage-point columns scale the raw access coefficient correctly; significance
+stars match the stored p-value). **Interpretation boundary:** conditional
+associations within the common-horizon sample; capital is intensive-margin only
+(see `capital_coverage_diagnostic.csv`); significance is not substantive importance
+(magnitude and the CI matter); this does not address survivor-selection (Step 10).
 
 ## Acceptance anchors
 
@@ -828,6 +856,9 @@ A correct full run reproduces:
 - financed firms 47,714 (firms with at least one qualifying deal)
 - INVESTED firms 50,815 (firms with at least one recorded investor); grant-and-VC firms 3,960
 - coverage asymmetry: employees 82% green vs 50% other; total_raised 59% vs 24%
+- step5b/step13 common horizon (`first5_analysis.parquet`): 31,257 eligible firms
+  (4,335 green, 26,922 other); of these, 18,064 have a disclosed in-window capital
+  amount (2,707 green, 15,357 other)
 
 ## Tests
 
