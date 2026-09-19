@@ -25,8 +25,9 @@ step maps to the thesis output register.
 | 10 | `step10_expanded_status` | expanded start-up-status population (`step10_*`, `T_status_*`) | done (supplementary) |
 | 11 | `step4_maps` | five European choropleth maps of the Step 4 outputs (`F4_M1`-`F4_M5`, PNG + PDF) | done (supplementary) |
 | 13 | `step13_regression` | common-horizon financing/timing/capital regressions (`T_regression_*_5yr`, `capital_coverage_diagnostic`, `step13_regression_sample_audit`, `captions_step13`) | done (supplementary) |
+| 14 | `step14_public_private` | common-horizon public/private investor participation, sequencing and deal-size-by-composition (`investor_type_mapping`, `pubpriv_analysis_5yr`, `T14_*`, `captions_step14`) | done (supplementary) |
 
-Step 5b, Steps 9, 10, 13 and the map set (`step4_maps`) are **supplementary, strictly
+Step 5b, Steps 9, 10, 13, 14 and the map set (`step4_maps`) are **supplementary, strictly
 read-only** exercises. They add nothing to the core pipeline (they never modify
 `company_analysis.parquet`, `population_key.parquet`, or any Step 1-8 output); they
 only read prior outputs and write their own new files (distinct filenames).
@@ -34,8 +35,11 @@ only read prior outputs and write their own new files (distinct filenames).
 its own `T_first5_*` / `first5_analysis.parquet` / `T_first5_firm_audit` /
 `captions_first5` / `F_first5_*` files; `step13_regression` reads only
 `first5_analysis.parquet` (Step 5b) and writes only its own `T_regression_*_5yr` /
-`capital_coverage_diagnostic` / `step13_*` / `captions_step13` files; `step4_maps`
-reads the Step 4 CSVs and only renders images — it computes no new measure.
+`capital_coverage_diagnostic` / `step13_*` / `captions_step13` files;
+`step14_public_private` reads `first5_analysis.parquet` (Step 5b) plus the Step 1/2
+inputs and writes only its own `investor_type_mapping` / `pubpriv_analysis_5yr` /
+`T14_*` / `step14_sample_audit` / `captions_step14` files; `step4_maps` reads the
+Step 4 CSVs and only renders images — it computes no new measure.
 
 ## Prerequisites
 
@@ -847,6 +851,75 @@ stars match the stored p-value). **Interpretation boundary:** conditional
 associations within the common-horizon sample; capital is intensive-margin only
 (see `capital_coverage_diagnostic.csv`); significance is not substantive importance
 (magnitude and the CI matter); this does not address survivor-selection (Step 10).
+
+## Step 14 — Public/private investor participation (supplementary, read-only)
+
+Addresses the supervisor's public/private request on the common horizon. It begins
+with an **explicit investor classification** (`investor_type_mapping.csv`, covering
+100% of the 10 observed `investor_type_grp` values): public = {Public/Government};
+private = {Independent VC, Corporate, Angel, PE/Growth, Family Office}; exclude =
+{Impact Investing, Accelerator/Incubator, Lender/Debt, Other/Unclassified}. This is
+the single source of truth in `config.py`, not decided silently in code. It then
+joins each eligible firm's in-window deals (Step 5b `prepare_window`) to
+`deal_investors_clean -> investors_clean` and builds firm-level participation flags
+(`pubpriv_analysis_5yr.parquet`): `has_investor_record_5yr`, `any_public_5yr`,
+`any_private_5yr`, `both_public_private_5yr`, `same_deal_public_private_5yr` (a subset
+of ever-both), `n_investors_5yr`. Participation is reported under **two denominators**
+— firms with an in-window investor record (primary, matching Step 6 INVESTED) and all
+31,257 eligible (sensitivity). Adjusted LPMs (HC1) use columns (1) green; (2) +cohort;
+(3) +country FE; (4) +industry FE as the main specs, plus (5) "+ deal count"
+(`log(1 + n_deals_5yr)`) as a sensitivity (never the baseline). Grant->VC and
+public/private **sequencing** are recomputed on the five-year window (descriptive
+ordering, not crowding-in). Because `deal_investors_clean` has **no investor-level
+amount**, capital is reported as disclosed **deal size by investor composition**
+(public-only / private-only / mixed), never as per-investor "public/private capital".
+Full module docs: [`step14_public_private/README.md`](step14_public_private/README.md).
+
+Like Step 13, this step needs `statsmodels`, which is not in the base pipeline and
+must be installed first (pinned in [`requirements.txt`](requirements.txt)); otherwise
+the run exits with `ERROR: statsmodels is not installed`:
+
+```bash
+pip install -r empirical_analysis/requirements.txt   # or: pip install "statsmodels>=0.14"
+```
+
+```bash
+# Step 5b must run first to produce first5_analysis.parquet
+python -m empirical_analysis.step5b_fixed_horizon.run
+
+python -m empirical_analysis.step14_public_private.run \
+    --firm-panel data/outputs/chapter4/first5_analysis.parquet \
+    --firm-table data/outputs/company_analysis.parquet \
+    --clean-dir data/outputs/clean_tables \
+    --output-dir data/outputs/chapter4 \
+    --industry group
+```
+
+What to expect (in `data/outputs/chapter4/`):
+
+| File | Contents |
+|---|---|
+| `investor_type_mapping.csv` | public/private/exclude classification + n_investors / n_relationships / n_firms per type (100% coverage) |
+| `investor_amount_audit.csv` | evidence no investor-level amount exists; documents the deal-level fallback |
+| `pubpriv_analysis_5yr.parquet` | one row per eligible firm with in-window participation flags |
+| `T14_pubpriv_participation.csv` | green vs other participation under two denominators (invested, eligible) |
+| `T14_pubpriv_regression.csv` | LPM (1)-(4) main + (5) "+ deal count" sensitivity for the four outcomes |
+| `T14_grant_vc_sequencing_5yr.csv` | in-window grant->VC ordering, green vs other |
+| `T14_pubpriv_sequencing_5yr.csv` | in-window public/private ordering, green vs other |
+| `T14_pubpriv_ordering_regression.csv` | supplementary LPM for public_precedes_private (selected sample) |
+| `T14_deal_size_by_investor_composition_5yr.csv` | disclosed deal size by investor composition |
+| `step14_sample_audit.csv` | per-spec regression audit |
+| `captions_step14.csv` | classification, denominators, sensitivity framing, capital caveat |
+
+The run prints the classification, coefficient paths and an acceptance report (eight
+checks: 100% classification coverage; `same_deal` subset of `both`; two denominators
+with invested <= eligible; specs (1)-(5) with `(n)` labels, n == invested sample, one
+row per firm; deal-count control only in column (5); pp columns and stars consistent;
+deal-size-by-composition uses disclosed deals only; output names disjoint from Steps
+5/5b/6/13). **Interpretation boundary:** conditional associations, not causation;
+sequencing is descriptive ordering; capital is deal size by composition (no
+investor-level amount exists); the ordering regression conditions on receiving both
+capital types; none of this addresses survivor-selection (Step 10).
 
 ## Acceptance anchors
 
