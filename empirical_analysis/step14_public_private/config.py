@@ -156,6 +156,10 @@ OUT_GRANT_VC = "T14_grant_vc_sequencing_5yr"
 OUT_SEQUENCING = "T14_pubpriv_sequencing_5yr"
 OUT_ORDERING_REG = "T14_pubpriv_ordering_regression"
 OUT_CAPITAL_COMPOSITION = "T14_deal_size_by_investor_composition_5yr"
+# Figure-source tables (Figures 5 and S1): per-investor-type participation and
+# public/private participation, both over the INVESTED five-year sample.
+OUT_INVESTOR_TYPE_PARTICIPATION = "T_first5_investor_type_participation"
+OUT_PUBLIC_PRIVATE = "T_first5_public_private"
 SAMPLE_AUDIT = "step14_sample_audit"
 CAPTIONS_FILE = "captions_step14"
 
@@ -173,7 +177,8 @@ RESULT_COLUMNS = [
 STEP14_OUTPUT_NAMES = {
     OUT_MAPPING, OUT_AMOUNT_AUDIT, OUT_FIRM_PANEL, OUT_PARTICIPATION,
     OUT_REGRESSION, OUT_GRANT_VC, OUT_SEQUENCING, OUT_ORDERING_REG,
-    OUT_CAPITAL_COMPOSITION, SAMPLE_AUDIT, CAPTIONS_FILE,
+    OUT_CAPITAL_COMPOSITION, OUT_INVESTOR_TYPE_PARTICIPATION, OUT_PUBLIC_PRIVATE,
+    SAMPLE_AUDIT, CAPTIONS_FILE,
 }
 
 # --- Reporting -------------------------------------------------------------

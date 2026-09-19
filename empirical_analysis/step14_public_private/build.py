@@ -222,7 +222,7 @@ def build_relations(
 ) -> pd.DataFrame:
     """One row per (eligible firm, in-window deal, investor) with class flags."""
     base_cols = ["company_id", "deal_id", "deal_date", "rel", "green",
-                 "deal_size", "stage_group", "investor_id",
+                 "deal_size", "stage_group", "investor_id", "investor_type_grp",
                  "analytical_group", "is_public", "is_private"]
     if in_window is None or in_window.empty or deal_investors is None or deal_investors.empty:
         return pd.DataFrame(columns=base_cols)
@@ -232,7 +232,8 @@ def build_relations(
     inv = classify_investors(investors)
     rel = iw.merge(di, on="deal_id", how="inner")
     rel = rel.merge(
-        inv[["investor_id", "analytical_group", "is_public", "is_private"]],
+        inv[["investor_id", "investor_type_grp",
+             "analytical_group", "is_public", "is_private"]],
         on="investor_id", how="left",
     )
     rel["is_public"] = _num(rel["is_public"]).fillna(0).astype(int)
@@ -323,6 +324,88 @@ def build_participation(firm_panel: pd.DataFrame) -> pd.DataFrame:
             row[f"n_startups_{label}"] = int(len(g) + len(o))
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------
+# Figure sources: per-investor-type participation + public/private (INVESTED)
+# --------------------------------------------------------------------------
+def build_investor_type_participation(
+    relations: pd.DataFrame, firm_panel: pd.DataFrame
+) -> pd.DataFrame:
+    """Per investor_type x group: share of INVESTED firms with >=1 such investor.
+
+    Denominator = firms with any in-window investor record (`has_investor_record
+    _5yr==1`), matching Step 6's INVESTED logic. Categories are non-exclusive: a
+    firm counts under every investor type it has in-window. Feeds Figure 5.
+    """
+    cols = ["investor_type", "group", "n_firms_with_investor_type",
+            "n_firms_with_any_investor_record_5yr", "share_with_type",
+            "n_green_invested", "n_other_invested"]
+    invested = firm_panel[firm_panel["has_investor_record_5yr"] == 1]
+    n_g = int((invested[config.GREEN_COL] == 1).sum())
+    n_o = int((invested[config.GREEN_COL] != 1).sum())
+    if relations is None or relations.empty:
+        return pd.DataFrame(columns=cols)
+
+    green_by = firm_panel.set_index("company_id")[config.GREEN_COL]
+    rel = relations[relations["investor_type_grp"].notna()].copy()
+    rel["green"] = _num(rel["company_id"].map(green_by)).fillna(
+        _num(rel["green"])
+    ).astype(int)
+    firm_type = rel[["company_id", "investor_type_grp", "green"]].drop_duplicates()
+
+    rows = []
+    for t in sorted(firm_type["investor_type_grp"].unique()):
+        sub = firm_type[firm_type["investor_type_grp"] == t]
+        gw = int((sub["green"] == 1).sum())
+        ow = int((sub["green"] != 1).sum())
+        for grp_label, n_with, denom in (
+            ("green", gw, n_g), ("other", ow, n_o)
+        ):
+            rows.append({
+                "investor_type": t,
+                "group": grp_label,
+                "n_firms_with_investor_type": n_with,
+                "n_firms_with_any_investor_record_5yr": denom,
+                "share_with_type": round(n_with / denom, config.DECIMALS)
+                if denom else float("nan"),
+                "n_green_invested": n_g,
+                "n_other_invested": n_o,
+            })
+    return pd.DataFrame(rows, columns=cols)
+
+
+def build_public_private_first5(firm_panel: pd.DataFrame) -> pd.DataFrame:
+    """Four public/private outcomes, green vs other, over the INVESTED sample.
+
+    Figure-shaped (Figure S1) subset of the two-denominator participation table:
+    denominator = firms with an in-window investor record.
+    """
+    cols = ["outcome", "green_share", "other_share", "n_green_with", "n_other_with",
+            "n_green_invested", "n_other_invested"]
+    invested = firm_panel[firm_panel["has_investor_record_5yr"] == 1]
+    g, o = _split(invested)
+    n_g, n_o = int(len(g)), int(len(o))
+    outcomes = [
+        ("any_public", "any_public_5yr"),
+        ("any_private", "any_private_5yr"),
+        ("both_public_private", "both_public_private_5yr"),
+        ("same_deal_public_private", "same_deal_public_private_5yr"),
+    ]
+    rows = []
+    for label, col in outcomes:
+        gw = int((_num(g[col]) == 1).sum()) if n_g else 0
+        ow = int((_num(o[col]) == 1).sum()) if n_o else 0
+        rows.append({
+            "outcome": label,
+            "green_share": round(gw / n_g, config.DECIMALS) if n_g else float("nan"),
+            "other_share": round(ow / n_o, config.DECIMALS) if n_o else float("nan"),
+            "n_green_with": gw,
+            "n_other_with": ow,
+            "n_green_invested": n_g,
+            "n_other_invested": n_o,
+        })
+    return pd.DataFrame(rows, columns=cols)
 
 
 # --------------------------------------------------------------------------
@@ -733,6 +816,12 @@ def build_all(
     result.firm_panel = firm_panel
     result.tables[config.OUT_PARTICIPATION] = build_participation(firm_panel)
 
+    # 2b. figure-source tables (Figures 5 and S1), INVESTED denominator.
+    result.tables[config.OUT_INVESTOR_TYPE_PARTICIPATION] = (
+        build_investor_type_participation(relations, firm_panel)
+    )
+    result.tables[config.OUT_PUBLIC_PRIVATE] = build_public_private_first5(firm_panel)
+
     # 3. adjusted regressions
     reg_table, reg_audit = build_regressions(firm_panel, industry_col)
     result.tables[config.OUT_REGRESSION] = reg_table
@@ -809,6 +898,20 @@ def build_captions(result: Step14Result) -> pd.DataFrame:
         "investor-record coverage transparent rather than treating 'no recorded "
         "investor' as substantive non-participation."
     )
+    cap[config.OUT_INVESTOR_TYPE_PARTICIPATION] = (
+        "Figure 5 source. Per investor type x group (green/other): the share of "
+        "firms with an in-window investor record that have >=1 investor of that "
+        "type within the five-year window. Denominator = INVESTED firms "
+        f"(green={diag.get('n_invested_green')}, "
+        f"other={diag.get('n_invested_other')}). Categories are non-exclusive: a "
+        "firm counts under every investor type it has in-window."
+    )
+    cap[config.OUT_PUBLIC_PRIVATE] = (
+        "Figure S1 source. Four public/private outcomes (any public, any private, "
+        "both, same-deal co-investment), green vs other, over firms with an "
+        "in-window investor record (INVESTED denominator). same-deal is a subset "
+        "of ever-both."
+    )
     cap[config.OUT_REGRESSION] = (
         f"Linear probability models (HC1 SE) for four participation outcomes "
         "(any_public, any_private, both_public_private, same_deal_public_private) "
@@ -866,6 +969,7 @@ def write_outputs(result: Step14Result, output_dir: Path | None = None) -> Path:
 
     csv_names = [
         config.OUT_MAPPING, config.OUT_AMOUNT_AUDIT, config.OUT_PARTICIPATION,
+        config.OUT_INVESTOR_TYPE_PARTICIPATION, config.OUT_PUBLIC_PRIVATE,
         config.OUT_REGRESSION, config.OUT_GRANT_VC, config.OUT_SEQUENCING,
         config.OUT_ORDERING_REG, config.OUT_CAPITAL_COMPOSITION,
     ]

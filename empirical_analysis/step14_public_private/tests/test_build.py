@@ -30,7 +30,9 @@ from empirical_analysis.step14_public_private.build import (
     build_firm_panel,
     build_grant_vc_sequencing,
     build_investor_mapping,
+    build_investor_type_participation,
     build_participation,
+    build_public_private_first5,
     build_pubpriv_sequencing,
     build_regressions,
     build_relations,
@@ -194,6 +196,40 @@ def test_participation_two_denominators():
     assert part.loc["any_public_5yr", "n_startups_eligible"] == 4
     # has_investor_record is 1.0 by construction within the invested sample
     assert part.loc["has_investor_record_5yr", "green_pct_invested"] == 1.0
+
+
+# --------------------------------------------------------------------------
+# Figure-source tables (Figures 5 and S1)
+# --------------------------------------------------------------------------
+def test_investor_type_participation_invested_denominator_non_exclusive():
+    rel = build_relations(_in_window(), _deal_investors(), _investors())
+    panel = build_firm_panel(_elig_controls(), rel)
+    itp = build_investor_type_participation(rel, panel)
+    # denominator is INVESTED firms per group (G1 green=1; O1,O2 other=2)
+    assert (itp["n_green_invested"] == 1).all()
+    assert (itp["n_other_invested"] == 2).all()
+    # Public/Government: G1 (green) has it -> green share 1/1; no other firm has it
+    pub_g = itp[(itp["investor_type"] == "Public/Government") & (itp["group"] == "green")]
+    assert pub_g["n_firms_with_investor_type"].iloc[0] == 1
+    assert pub_g["share_with_type"].iloc[0] == 1.0
+    # Accelerator/Incubator: only O2 (other) has it
+    acc = itp[(itp["investor_type"] == "Accelerator/Incubator") & (itp["group"] == "other")]
+    assert acc["n_firms_with_investor_type"].iloc[0] == 1
+    # non-exclusive: G1 contributes to both public and private (Independent VC) rows
+    ivc_g = itp[(itp["investor_type"] == "Independent VC") & (itp["group"] == "green")]
+    assert ivc_g["n_firms_with_investor_type"].iloc[0] == 1
+
+
+def test_public_private_first5_invested_shares():
+    rel = build_relations(_in_window(), _deal_investors(), _investors())
+    panel = build_firm_panel(_elig_controls(), rel)
+    pp = build_public_private_first5(panel).set_index("outcome")
+    # invested denominators: green=1 (G1), other=2 (O1, O2)
+    assert pp.loc["any_public", "n_green_invested"] == 1
+    assert pp.loc["any_public", "n_other_invested"] == 2
+    # G1 has public + private -> both=1/1; O1 same-deal both -> both other 1/2
+    assert pp.loc["both_public_private", "green_share"] == 1.0
+    assert pp.loc["same_deal_public_private", "n_other_with"] == 1
 
 
 # --------------------------------------------------------------------------

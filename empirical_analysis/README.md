@@ -921,6 +921,38 @@ sequencing is descriptive ordering; capital is deal size by composition (no
 investor-level amount exists); the ordering regression conditions on receiving both
 capital types; none of this addresses survivor-selection (Step 10).
 
+## Thesis figures
+
+[`make_figures.py`](make_figures.py) renders the thesis figures as PNGs from the
+Chapter 4 CSVs (green start-ups in green, other European start-ups in grey; percentage
+labels on the bars; no figure titles or on-plot source text). Two of its inputs are
+produced by Step 14 (`T_first5_investor_type_participation.csv`,
+`T_first5_public_private.csv`), so run Step 14 first. It needs `matplotlib`, pinned in
+[`requirements.txt`](requirements.txt); missing figures are skipped with a clear
+message rather than crashing.
+
+```bash
+pip install -r empirical_analysis/requirements.txt   # matplotlib
+python -m empirical_analysis.make_figures            # all; or --only 1 4 5
+```
+
+Optional args: `--input-dir` (folder with the source CSVs, default
+`data/outputs/chapter4`), `--output-dir` (default `<input-dir>/figures`) and
+`--only` (subset). Full how-to-run: [`make_figures_README.md`](make_figures_README.md).
+
+Outputs (in `data/outputs/chapter4/figures/`):
+
+| File | Figure |
+|---|---|
+| `fig1_founding_cohort_composition.png` | Figure 1: cohort composition within each group (`F4_01_green_share_by_cohort.csv`) |
+| `fig4_first5_financing_access.png` | Figure 4: first-five-year financing access, green vs other (`T_first5_access.csv`) |
+| `fig5_first5_investor_type_participation.png` | Figure 5: first-five-year investor-type mix, INVESTED denominator (`T_first5_investor_type_participation.csv`) |
+| `fig6_green_share_firms_vs_capital.png` | Figure 6: green share of firms vs recorded capital, top-10 by n_green (`T4_26_green_share_firms_vs_capital.csv`) |
+| `figS1_first5_public_private.png` | Figure S1: first-five-year public/private participation (`T_first5_public_private.csv`) |
+
+Figure 3 (the green location-quotient choropleth) is not produced here; the map set is
+rendered separately by [`step4_maps`](step4_maps/) (`F4_M5_green_lq`).
+
 ## Acceptance anchors
 
 A correct full run reproduces:

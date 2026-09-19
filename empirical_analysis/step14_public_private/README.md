@@ -166,6 +166,8 @@ python -m empirical_analysis.step14_public_private.run
 | `investor_amount_audit.csv` | evidence that no investor-level amount exists; documents the deal-level fallback |
 | `pubpriv_analysis_5yr.parquet` | one row per eligible firm with the in-window participation flags |
 | `T14_pubpriv_participation.csv` | green vs other participation under two denominators (invested, eligible) |
+| `T_first5_investor_type_participation.csv` | per investor type x group: share of INVESTED firms with >=1 such investor in-window (non-exclusive); Figure 5 source |
+| `T_first5_public_private.csv` | four public/private outcomes green vs other on the INVESTED denominator; Figure S1 source |
 | `T14_pubpriv_regression.csv` | LPM (1)-(4) main + (5) "+ deal count" sensitivity for the four outcomes |
 | `T14_grant_vc_sequencing_5yr.csv` | in-window grant->VC ordering, green vs other |
 | `T14_pubpriv_sequencing_5yr.csv` | in-window public/private ordering, green vs other |
