@@ -921,6 +921,43 @@ sequencing is descriptive ordering; capital is deal size by composition (no
 investor-level amount exists); the ordering regression conditions on receiving both
 capital types; none of this addresses survivor-selection (Step 10).
 
+## Regenerate the supervisor-feedback CSVs (custom input/output paths)
+
+The three steps below regenerate every CSV behind supervisor comments 1, 2, 4
+(Steps 5b and 13) and comment 3 (Step 14). Set two folders and run the rows in
+order — Step 5b writes `first5_analysis.parquet` into the output folder, and
+Steps 13 and 14 read it back from there.
+
+```bash
+# INPUTS: folder that contains company_analysis.parquet AND a clean_tables/ subfolder
+IN=/path/to/inputs
+# OUTPUTS: folder for all regenerated CSVs (and first5_analysis.parquet)
+OUT=/path/to/outputs
+
+# 0. one-off dependency (Steps 13 and 14 need statsmodels)
+pip install -r empirical_analysis/requirements.txt   # or: pip install "statsmodels>=0.14"
+
+# 1. Step 5b -> first5_analysis.parquet, T_first5_*.csv, T_first5_firm_audit.csv
+python -m empirical_analysis.step5b_fixed_horizon.run --firm-table "$IN/company_analysis.parquet" --clean-dir "$IN/clean_tables" --output-dir "$OUT"
+
+# 2. Step 13 -> T_regression_*_5yr.csv, capital_coverage_diagnostic.csv, step13_regression_sample_audit.csv
+python -m empirical_analysis.step13_regression.run --firm-panel "$OUT/first5_analysis.parquet" --output-dir "$OUT"
+
+# 3. Step 14 -> investor_type_mapping.csv, T14_*.csv, T_first5_investor_type_participation.csv, T_first5_public_private.csv
+python -m empirical_analysis.step14_public_private.run --firm-panel "$OUT/first5_analysis.parquet" --firm-table "$IN/company_analysis.parquet" --clean-dir "$IN/clean_tables" --output-dir "$OUT"
+```
+
+Then render the figures from that same output folder (PNGs go to `$OUT/figures`):
+
+```bash
+python -m empirical_analysis.make_figures --input-dir "$OUT" --output-dir "$OUT/figures"
+```
+
+Each override also has an environment-variable equivalent (`STEP5_FIRM_TABLE` /
+`STEP5B_FIRM_TABLE`, `STEP2_CLEAN_DIR`, `STEP13_FIRM_PANEL`, `STEP14_FIRM_PANEL`,
+`STEP5_OUTPUT_DIR` / `STEP13_OUTPUT_DIR` / `STEP14_OUTPUT_DIR`); the explicit
+flags above take precedence and are the simplest way to relocate paths.
+
 ## Thesis figures
 
 [`make_figures.py`](make_figures.py) renders the thesis figures as PNGs from the
